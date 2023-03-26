@@ -2,13 +2,14 @@ import minerl
 from minerl.data import BufferedBatchIter
 import numpy as np
 import random
+from itertools import combinations
 
 # Download the dataset before running this script
 data = minerl.data.make('MineRLTreechop-v0')
 iterator = BufferedBatchIter(data)
 demo_replay_memory = iterator.buffered_batch_iter(batch_size=2, num_epochs=1)
 
-basic_actions = {'forward', 'back', 'left', 'right', 'attack', 'jump', 'camera'}
+basic_actions = {'forward', 'back', 'left', 'right', 'attack', 'jump', 'look-left', 'look-right', 'look-up', 'look-down'}
 action_combos = [{'forward', 'left'}, {'forward', 'right'}, {'forward', 'jump'}, {'forward', 'attack'}]
 
 
@@ -75,6 +76,10 @@ def map_aggregate_action(aggregate_action):
 	'''
 	Function to map an aggregate action to one of the agent's available actions 
 	'''
+	cam_dirs = {0:'look-left', 1:'look-right', 2:'look-up', 3:'look-down'}
+	if 'camera' in aggregate_action:
+		cam = aggregate_action.pop('camera')
+		aggregate_action[cam_dirs[cam[1]]] = cam[0]
 
 	if len(aggregate_action.keys()) == 0:
 		action = 'noop'

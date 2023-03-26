@@ -23,7 +23,8 @@ action_names = {
 'jump_forward':11,
 'attack':12,
 'forward_attack':13,
-'attack_forward':13
+'attack_forward':13,
+'noop':14
 }
 
 # actions is a list of action dicts in the format that mineRL requires
@@ -190,6 +191,18 @@ actions = [
     "back": 0,
     "camera": [0,0],
     "forward": 1,
+    "jump": 0,
+    "left": 0,
+    "right": 0,
+    "sneak": 0,
+    "sprint": 0
+},
+
+{
+    "attack": 0,
+    "back": 0,
+    "camera": [0,0],
+    "forward": 0,
     "jump": 0,
     "left": 0,
     "right": 0,

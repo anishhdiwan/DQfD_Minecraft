@@ -26,10 +26,10 @@ basic_actions = {'forward', 'back', 'left', 'right', 'attack', 'jump', 'look-lef
 action_combos = [{'forward', 'left'}, {'forward', 'right'}, {'forward', 'jump'}, {'forward', 'attack'}]
 
 
-def get_aggregate_action(actions, cam_threshold=5.0):
+def get_aggregate_action(actions, cam_threshold=2.0):
 	'''
 	Function to aggregate actions from k transitions into one combined action
-	NOTE: Threshold is set to 5.0 to discount any micro-adjustments and only count camera movements for directional navigation
+	NOTE: Threshold is set to discount any micro-adjustments and only count camera movements for directional navigation
 	'''
 	# Removing spring and sneak from the actions dict
 	actions.pop('sneak')

@@ -4,6 +4,10 @@ import numpy as np
 import random
 from itertools import combinations
 
+import sys
+sys.path.append('../')
+from actions import action_names
+
 # Download the dataset before running this script
 data = minerl.data.make('MineRLTreechop-v0')
 iterator = BufferedBatchIter(data)
@@ -118,7 +122,7 @@ def map_aggregate_action(aggregate_action):
 
 	# If empty then select no-operation action
 	if len(aggregate_action.keys()) == 0:
-		action = 'noop'
+		action = {'noop'}
 
 	# If there is only one action then pick that one 
 	elif len(aggregate_action.keys()) == 1:
@@ -128,7 +132,7 @@ def map_aggregate_action(aggregate_action):
 	# If there are two actions then check if that pair is possible. Pick the pair if it is, else pick the most occuring one
 	elif len(aggregate_action.keys()) == 2:
 		if set(aggregate_action.keys()) in action_combos:
-			action = set(aggregate_action.keys())
+			action = list(aggregate_action.keys())[0] + "_" + list(aggregate_action.keys())[1] 
 		else:
 			max_idx = [i for i, x in enumerate(aggregate_action.values()) if x == max(aggregate_action.values())]
 			action = list(aggregate_action.keys())[random.choice(max_idx)]
@@ -144,7 +148,7 @@ def map_aggregate_action(aggregate_action):
 				pair_match = True
 				if aggregate_action[pair[0]] + aggregate_action[pair[1]] > max_occurences: 
 					max_occurences = aggregate_action[pair[0]] + aggregate_action[pair[1]]
-					action = set(pair)
+					action = pair[0] + "_" + pair[1]
 		if not pair_match:
 			print('yes')
 			max_idx = [i for i, x in enumerate(aggregate_action.values()) if x == max(aggregate_action.values())]
@@ -154,27 +158,24 @@ def map_aggregate_action(aggregate_action):
 	return action
 
 
+for i in range(2):
+	current_states, actions, rewards, next_states, dones = next(demo_replay_memory)
+	# print(f'actions: {actions}')
+	# print(f'rewards: {rewards}')
+	print('----------')
 
+	aggregate_reward = np.sum(rewards)
+	aggregate_action = get_aggregate_action(actions)
+	print(f'aggregate action: {aggregate_action}')
+	print(f'aggregate reward: {aggregate_reward}')
 
+	agent_action = map_aggregate_action(aggregate_action)
+	idx = action_names[agent_action]
 
+	print(f'agent action: {agent_action}')
+	print(f'idx: {idx}')
 
-# for i in range(5):
-# 	current_states, actions, rewards, next_states, dones = next(demo_replay_memory)
-# 	# print(f'actions: {actions}')
-# 	# print(f'rewards: {rewards}')
-# 	print('----------')
+	print('----------')
 
-# 	aggregate_reward = np.sum(rewards)
-# 	aggregate_action = get_aggregate_action(actions)
-# 	print(f'aggregate action: {aggregate_action}')
-# 	print(f'aggregate reward: {aggregate_reward}')
-
-# 	agent_action = map_aggregate_action(aggregate_action)
-# 	print(f'agent action: {agent_action}')
-
-# 	print('----------')
-
-
-print(map_aggregate_action({'attack': 2, 'forward': 1, 'jump': 1, 'look-right': 1}))
 
 

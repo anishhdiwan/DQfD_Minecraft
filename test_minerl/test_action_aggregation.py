@@ -122,7 +122,7 @@ def map_aggregate_action(aggregate_action):
 
 	# If empty then select no-operation action
 	if len(aggregate_action.keys()) == 0:
-		action = {'noop'}
+		action = 'noop'
 
 	# If there is only one action then pick that one 
 	elif len(aggregate_action.keys()) == 1:
@@ -158,7 +158,7 @@ def map_aggregate_action(aggregate_action):
 	return action
 
 
-for i in range(2):
+for i in range(10):
 	current_states, actions, rewards, next_states, dones = next(demo_replay_memory)
 	# print(f'actions: {actions}')
 	# print(f'rewards: {rewards}')

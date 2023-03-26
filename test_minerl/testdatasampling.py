@@ -15,7 +15,7 @@ for current_state, action, reward, next_state, done \
         print(reward[-1])
 
         # Check if final (next_state) is terminal.
-        print(done[-1])
+        print(done)
 
         # ... do something with the data.
         print("At the end of trajectories the length"

@@ -3,15 +3,8 @@ from minerl.data import BufferedBatchIter
 import numpy as np
 import random
 from itertools import combinations
-
-import sys
-sys.path.append('../')
 from actions import action_names
 
-# Download the dataset before running this script
-data = minerl.data.make('MineRLTreechop-v0')
-iterator = BufferedBatchIter(data)
-demo_replay_memory = iterator.buffered_batch_iter(batch_size=2, num_epochs=1)
 
 ''' 
 The mineRL framework models actions as dictionaries of individual actions. Player recorded demonstration data has multiple 
@@ -157,24 +150,41 @@ def map_aggregate_action(aggregate_action):
 	return action
 
 
-for i in range(10):
-	current_states, actions, rewards, next_states, dones = next(demo_replay_memory)
-	# print(f'actions: {actions}')
-	# print(f'rewards: {rewards}')
-	print('----------')
+# # Initializing the generator
+# # Download the dataset before running this script
+# data = minerl.data.make('MineRLTreechop-v0')
+# iterator = BufferedBatchIter(data)
+# demo_replay_memory = iterator.buffered_batch_iter(batch_size=frame_stack, num_epochs=1) # The batch_size here refers to the number of consequtive frames
 
-	aggregate_reward = np.sum(rewards)
-	aggregate_action = get_aggregate_action(actions)
-	print(f'aggregate action: {aggregate_action}')
-	print(f'aggregate reward: {aggregate_reward}')
 
-	agent_action = map_aggregate_action(aggregate_action)
-	idx = action_names[agent_action]
+def sample_demo_batch(demo_replay_memory, batch_size, frame_stack):
+	'''
+	Returns batch_size number of transitions containing frame_stack in-game transitions. One transition here has 
+	frame_stack number of in-game frames (because of frame-skipping and concatenation of observation images)
+	'''
+	# Setting up empty lists to store batch_size number of transitions
+	batch_states = []
+	batch_actions = []
+	batch_rewards = []
+	batch_next_states = []
+	batch_dones = []
 
-	print(f'agent action: {agent_action}')
-	print(f'idx: {idx}')
+	for i in range(batch_size):
+		current_states, actions, rewards, next_states, dones = next(demo_replay_memory)
+		batch_states.append(current_states['pov'])
+		batch_next_states.append(next_states['pov'])
+		batch_rewards.append(np.sum(rewards))
 
-	print('----------')
+		aggregate_action = get_aggregate_action(actions)
+		agent_action = map_aggregate_action(aggregate_action)
+		action_idx = action_names[agent_action]
+		batch_actions.append(action_idx)
+
+		if np.sum(dones) > 0:
+			batch_dones.append(1)
+
+	return batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones
+
 
 
 

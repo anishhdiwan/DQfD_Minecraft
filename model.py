@@ -16,6 +16,7 @@ from minerl.data import BufferedBatchIter
 
 # Actions are defined as dictionaries in mineRL. A smaller list of actions is defined separately and these are imported here for simplicity
 from actions import actions 
+from demo_sampling import sample_demo_batch
 
 # Setting up a device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -72,10 +73,15 @@ LR = 1e-4
 
 # Creating the environment (this may take a few minutes) and setting up the data sampling iterator
 env = gym.make('MineRLTreechop-v0')
+
+# Initializing the generator
+# Download the dataset before running this script
 data = minerl.data.make('MineRLTreechop-v0')
 iterator = BufferedBatchIter(data)
-gen = iterator.buffered_batch_iter(batch_size=4, num_epochs=1)
+demo_replay_memory = iterator.buffered_batch_iter(batch_size=frame_stack, num_epochs=1) # The batch_size here refers to the number of consequtive frames
 
+
+batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones = sample_demo_batch(demo_replay_memory, BATCH_SIZE, FRAME_STACK)
 
 
 n_observation_feats = 64 * 64 * FRAME_STACK 

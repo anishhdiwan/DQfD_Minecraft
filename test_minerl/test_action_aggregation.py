@@ -84,14 +84,14 @@ def map_aggregate_action(aggregate_action):
 	if len(aggregate_action.keys()) == 0:
 		action = 'noop'
 	elif len(aggregate_action.keys()) == 1:
-		if aggregate_action.keys()[0] in basic_actions:
-			action = aggregate_action.keys()[0]
+		if list(aggregate_action.keys())[0] in basic_actions:
+			action = list(aggregate_action.keys())[0]
 	elif len(aggregate_action.keys()) == 2:
 		if set(aggregate_action.keys()) in action_combos:
 			action = set(aggregate_action.keys())
 		else:
 			max_idx = [i for i, x in enumerate(aggregate_action.values()) if x == max(aggregate_action.values())]
-			action = aggregate_action.keys()[random.choice(max_idx)]
+			action = list(aggregate_action.keys())[random.choice(max_idx)]
 
 	elif len(aggregate_action.keys()) > 2:
 		action_pairs = list(combinations(aggregate_action.keys(), 2))
@@ -104,7 +104,7 @@ def map_aggregate_action(aggregate_action):
 					max_occurences = aggregate_action[pair[0]] + aggregate_action[pair[1]]
 			else:
 				max_idx = [i for i, x in enumerate(aggregate_action.values()) if x == max(aggregate_action.values())]
-				action = aggregate_action.keys()[random.choice(max_idx)]
+				action = list(aggregate_action.keys())[random.choice(max_idx)]
 
 
 	return action
@@ -118,16 +118,16 @@ for i in range(5):
 	current_states, actions, rewards, next_states, dones = next(demo_replay_memory)
 	# print(f'actions: {actions}')
 	# print(f'rewards: {rewards}')
-	# print('----------')
+	print('----------')
 
 	aggregate_reward = np.sum(rewards)
 	aggregate_action = get_aggregate_action(actions)
 	print(f'aggregate action: {aggregate_action}')
 	print(f'aggregate reward: {aggregate_reward}')
-	print('################')
-
 
 	agent_action = map_aggregate_action(aggregate_action)
-	print(agent_action)
+	print(f'agent action: {agent_action}')
+
+	print('----------')
 
 

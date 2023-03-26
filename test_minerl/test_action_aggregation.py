@@ -22,9 +22,10 @@ basic_actions = {'forward', 'back', 'left', 'right', 'attack', 'jump', 'look-lef
 action_combos = [{'forward', 'left'}, {'forward', 'right'}, {'forward', 'jump'}, {'forward', 'attack'}]
 
 
-def get_aggregate_action(actions, cam_threshold=2.0):
+def get_aggregate_action(actions, cam_threshold=5.0):
 	'''
 	Function to aggregate actions from k transitions into one combined action
+	NOTE: Threshold is set to 5.0 to discount any micro-adjustments and only count camera movements for directional navigation
 	'''
 	# Removing spring and sneak from the actions dict
 	actions.pop('sneak')
@@ -132,19 +133,22 @@ def map_aggregate_action(aggregate_action):
 			max_idx = [i for i, x in enumerate(aggregate_action.values()) if x == max(aggregate_action.values())]
 			action = list(aggregate_action.keys())[random.choice(max_idx)]
 
-	# If there are more than 2 actions then check all pairs. Pick a pair with the max total occurence cout
+	# If there are more than 2 actions then check all pairs. Pick a pair with the max total occurence count
 	elif len(aggregate_action.keys()) > 2:
 		action_pairs = list(combinations(aggregate_action.keys(), 2))
 		max_occurences = 0
 		action = None
+		pair_match = False
 		for pair in action_pairs:
 			if set(pair) in action_combos:
+				pair_match = True
 				if aggregate_action[pair[0]] + aggregate_action[pair[1]] > max_occurences: 
-					action = set(pair)
 					max_occurences = aggregate_action[pair[0]] + aggregate_action[pair[1]]
-			else:
-				max_idx = [i for i, x in enumerate(aggregate_action.values()) if x == max(aggregate_action.values())]
-				action = list(aggregate_action.keys())[random.choice(max_idx)]
+					action = set(pair)
+		if not pair_match:
+			print('yes')
+			max_idx = [i for i, x in enumerate(aggregate_action.values()) if x == max(aggregate_action.values())]
+			action = list(aggregate_action.keys())[random.choice(max_idx)]
 
 
 	return action
@@ -154,20 +158,23 @@ def map_aggregate_action(aggregate_action):
 
 
 
-for i in range(5):
-	current_states, actions, rewards, next_states, dones = next(demo_replay_memory)
-	# print(f'actions: {actions}')
-	# print(f'rewards: {rewards}')
-	print('----------')
+# for i in range(5):
+# 	current_states, actions, rewards, next_states, dones = next(demo_replay_memory)
+# 	# print(f'actions: {actions}')
+# 	# print(f'rewards: {rewards}')
+# 	print('----------')
 
-	aggregate_reward = np.sum(rewards)
-	aggregate_action = get_aggregate_action(actions)
-	print(f'aggregate action: {aggregate_action}')
-	print(f'aggregate reward: {aggregate_reward}')
+# 	aggregate_reward = np.sum(rewards)
+# 	aggregate_action = get_aggregate_action(actions)
+# 	print(f'aggregate action: {aggregate_action}')
+# 	print(f'aggregate reward: {aggregate_reward}')
 
-	agent_action = map_aggregate_action(aggregate_action)
-	print(f'agent action: {agent_action}')
+# 	agent_action = map_aggregate_action(aggregate_action)
+# 	print(f'agent action: {agent_action}')
 
-	print('----------')
+# 	print('----------')
+
+
+print(map_aggregate_action({'attack': 2, 'forward': 1, 'jump': 1, 'look-right': 1}))
 
 

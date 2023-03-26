@@ -11,10 +11,6 @@ obs = env.reset()
 done = False
 print("Reset Successful!")
 
-# Printing some shapes
-# print(f"observation: {obs}")
-# print(obs.shape)
-
 for i in range(5):
     action = env.action_space.sample()
     obs, reward, done, _ = env.step(action)

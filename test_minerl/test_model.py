@@ -95,6 +95,7 @@ done = False
 
 # Defining the Q networks
 policy_net = DQfD(n_observation_feats, n_actions).to(device)
+policy_net = policy_net.float()
 # target_net = DQfD(n_observations, n_actions).to(device)
 # target_net.load_state_dict(policy_net.state_dict())
 
@@ -123,4 +124,4 @@ for i in range(2):
     batch_states = torch.as_tensor(np.array(batch_states))
     print(batch_states.shape)
     print(torch.flatten(batch_states).shape)
-    print(select_action(torch.flatten(batch_states).type(torch.DoubleTensor)))
+    print(select_action(torch.flatten(batch_states).float()))

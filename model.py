@@ -15,7 +15,7 @@ import minerl
 from minerl.data import BufferedBatchIter
 
 # Actions are defined as dictionaries in mineRL. A smaller list of actions is defined separately and these are imported here for simplicity
-from actions import actions 
+from actions import actions, action_names
 from demo_sampling import sample_demo_batch
 
 # Setting up a device
@@ -64,7 +64,7 @@ class DQfD(nn.Module):
 # TAU is the update rate of the target network
 # LR is the learning rate of the AdamW optimizer
 FRAME_STACK = 2
-BATCH_SIZE = 128
+BATCH_SIZE = 64
 GAMMA = 0.99
 EPS = 0.01
 TAU = 0.005
@@ -78,20 +78,20 @@ env = gym.make('MineRLTreechop-v0')
 # Download the dataset before running this script
 data = minerl.data.make('MineRLTreechop-v0')
 iterator = BufferedBatchIter(data)
-demo_replay_memory = iterator.buffered_batch_iter(batch_size=frame_stack, num_epochs=1) # The batch_size here refers to the number of consequtive frames
+demo_replay_memory = iterator.buffered_batch_iter(batch_size=FRAME_STACK, num_epochs=1) # The batch_size here refers to the number of consequtive frames
 
 
-batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones = sample_demo_batch(demo_replay_memory, BATCH_SIZE, FRAME_STACK)
+batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones = sample_demo_batch(demo_replay_memory, BATCH_SIZE)
 
 
 n_observation_feats = 64 * 64 * FRAME_STACK 
-n_actions = 13
+n_actions = len(action_names)
 done = False
 
 
 # Defining the Q networks
-policy_net = DQN(n_observations, n_actions).to(device)
-target_net = DQN(n_observations, n_actions).to(device)
+policy_net = DQfD(n_observations, n_actions).to(device)
+target_net = DQfD(n_observations, n_actions).to(device)
 target_net.load_state_dict(policy_net.state_dict())
 
 optimizer = optim.AdamW(policy_net.parameters(), lr=LR, amsgrad=True)
@@ -105,7 +105,7 @@ def select_action(state):
         with torch.no_grad():
             return policy_net(state).max(1)[1].view(1, 1)
     else:
-        return random.choice(actions)
+        return actions[action_names[random.choice(list(action_names.keys))]]
 
 
 def optimize_model(memory):

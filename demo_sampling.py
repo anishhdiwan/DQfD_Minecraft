@@ -157,7 +157,7 @@ def map_aggregate_action(aggregate_action):
 # demo_replay_memory = iterator.buffered_batch_iter(batch_size=frame_stack, num_epochs=1) # The batch_size here refers to the number of consequtive frames
 
 
-def sample_demo_batch(demo_replay_memory, batch_size, frame_stack):
+def sample_demo_batch(demo_replay_memory, batch_size):
 	'''
 	Returns batch_size number of transitions containing frame_stack in-game transitions. One transition here has 
 	frame_stack number of in-game frames (because of frame-skipping and concatenation of observation images)

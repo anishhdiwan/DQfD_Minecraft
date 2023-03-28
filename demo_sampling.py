@@ -4,6 +4,8 @@ import numpy as np
 import random
 from itertools import combinations
 from actions import action_names
+import cv2
+import numpy as np
 
 
 ''' 
@@ -157,7 +159,7 @@ def map_aggregate_action(aggregate_action):
 # demo_replay_memory = iterator.buffered_batch_iter(batch_size=frame_stack, num_epochs=1) # The batch_size here refers to the number of consequtive frames
 
 
-def sample_demo_batch(demo_replay_memory, batch_size):
+def sample_demo_batch(demo_replay_memory, batch_size, grayscale=False):
 	'''
 	Returns batch_size number of transitions containing frame_stack in-game transitions. One transition here has 
 	frame_stack number of in-game frames (because of frame-skipping and concatenation of observation images)
@@ -171,10 +173,23 @@ def sample_demo_batch(demo_replay_memory, batch_size):
 
 	for i in range(batch_size):
 		current_states, actions, rewards, next_states, dones = next(demo_replay_memory)
-		batch_states.append(current_states['pov'])
-		batch_next_states.append(next_states['pov'])
-		batch_rewards.append(np.sum(rewards))
 
+		# Grayscale
+		if grayscale==True:
+			for i in range(current_states['pov'].shape[0]):
+				current_states_gray = np.zeros((current_states['pov'].shape[:-1]))
+				next_states_gray = np.zeros((next_states['pov'].shape[:-1]))
+				current_states_gray[i] = cv2.cvtColor(current_states['pov'][i], cv2.COLOR_BGR2GRAY)
+				next_states_gray[i] = cv2.cvtColor(next_states['pov'][i], cv2.COLOR_BGR2GRAY)
+
+			batch_states.append(current_states_gray)
+			batch_next_states.append(next_states_gray)
+
+		else:
+			batch_states.append(current_states['pov'])
+			batch_next_states.append(next_states['pov'])
+
+		batch_rewards.append(np.sum(rewards))
 		aggregate_action = get_aggregate_action(actions)
 		agent_action = map_aggregate_action(aggregate_action)
 		action_idx = action_names[agent_action]

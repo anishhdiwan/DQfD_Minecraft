@@ -4,6 +4,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 from collections import namedtuple, deque
 from itertools import count
+import numpy as np
 
 import torch
 import torch.nn as nn
@@ -86,14 +87,14 @@ iterator = BufferedBatchIter(data)
 demo_replay_memory = iterator.buffered_batch_iter(batch_size=FRAME_STACK, num_epochs=1) # The batch_size here refers to the number of consequtive frames
 
 
-n_observation_feats = 64 * 64 * 3 * FRAME_STACK 
+n_observation_feats =  BATCH_SIZE * FRAME_STACK * 64 * 64 #  64 * 64 * 3 * FRAME_STACK 
 print(f"num observation features: {n_observation_feats}")
 n_actions = 14
 done = False
 
 
 # Defining the Q networks
-# policy_net = DQfD(n_observation_feats, n_actions).to(device)
+policy_net = DQfD(n_observation_feats, n_actions).to(device)
 # target_net = DQfD(n_observations, n_actions).to(device)
 # target_net.load_state_dict(policy_net.state_dict())
 
@@ -116,11 +117,10 @@ def select_action(state):
 
 
 for i in range(2):
-    batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones = sample_demo_batch(demo_replay_memory, BATCH_SIZE)
+    batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones = sample_demo_batch(demo_replay_memory, BATCH_SIZE, grayscale=True)
     
 
-    # batch_states = torch.as_tensor(batch_states)
-    # print(batch_states.shape)
-    # print(select_action(torch.reshape(batch_states, (-1,128))))
-
-
+    batch_states = torch.as_tensor(np.array(batch_states))
+    print(batch_states.shape)
+    print(torch.flatten(batch_states).shape)
+    print(select_action(torch.flatten(batch_states).type(torch.DoubleTensor)))

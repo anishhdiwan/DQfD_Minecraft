@@ -71,7 +71,7 @@ class DQfD(nn.Module):
 FRAME_STACK = 2
 BATCH_SIZE = 64
 GAMMA = 0.99
-EPS = 0
+EPS = 0.5
 TAU = 0.005
 LR = 1e-4
 
@@ -109,7 +109,7 @@ def select_action(state):
     if sample > EPS:
         print("Exploiting")
         with torch.no_grad():
-            return policy_net(state) #policy_net(state).max(1)[1].view(1, 1)
+            return torch.argmax(policy_net(state)) #policy_net(state).max(1)[1].view(1, 1)
     else:
         print("Exploring")
         return random.choice(list(action_names.keys()))
@@ -122,6 +122,4 @@ for i in range(2):
     
 
     batch_states = torch.as_tensor(np.array(batch_states))
-    print(batch_states.shape)
-    print(torch.flatten(batch_states).shape)
     print(select_action(torch.flatten(batch_states).float()))

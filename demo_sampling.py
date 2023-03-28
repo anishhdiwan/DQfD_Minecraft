@@ -182,6 +182,8 @@ def sample_demo_batch(demo_replay_memory, batch_size):
 
 		if np.sum(dones) > 0:
 			batch_dones.append(1)
+		else:
+			batch_dones.append(0)
 
 	return batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones
 

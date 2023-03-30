@@ -30,6 +30,8 @@ device = "cpu"
 Transition = namedtuple('Transition', ('state', 'action', 'reward', 'next_state'))
 
 
+
+# Defining the replay memory class for the agent's self-explored transitions
 class ReplayMemory:
 
     def __init__(self, capacity):
@@ -44,6 +46,7 @@ class ReplayMemory:
 
     def __len__(self):
         return len(self.memory)
+
 
 # Defining the model class
 class DQfD(nn.Module):
@@ -60,6 +63,46 @@ class DQfD(nn.Module):
         x = F.relu(self.layer1(x))
         x = F.relu(self.layer2(x))
         return self.layer3(x)
+
+
+# Defining a modified DQfD loss function (1 step q learning loss + large margin classification loss + L2 regularization (implemented within adam))
+class DQfD_Loss(nn.Module):
+    def __init__(self):
+        super(DQfD_Loss, self).__init__()
+
+    
+    def margin_function(agent_action, demo_action, margin=):
+        return torch.ge(agent_action, demo_action).float()
+
+
+
+    def forward(self, states, actions, rewards, next_states, dones, GAMMA):
+
+        # terminal_mask = torch.as_tensor(np.array(dones)).ge(1)
+        # non_terminal_mask = ~terminal_mask
+
+
+        # terminal_states = torch.masked_select(states.T, terminal_mask) # Not to be confused with terminal next_states. Terminal next_states are the actual terminal states. 
+        # terminating_actions = torch.masked_select(actions , terminal_mask)
+        # terminal_next_states = torch.masked_select(next_states.T, terminal_mask)
+        # terminal_rewards = torch.masked_select(rewards, terminal_mask)
+
+        # non_terminal_states = torch.masked_select(states.T, non_terminal_mask) # Not to be confused with terminal next_states. Terminal next_states are the actual terminal states. 
+        # non_terminating_actions = torch.masked_select(actions , non_terminal_mask)
+        # non_terminal_next_states = torch.masked_select(next_states.T, non_terminal_mask)
+        # non_terminal_rewards = torch.masked_select(rewards, non_terminal_mask)
+
+        # 1-step TD loss
+        targets = rewards + GAMMA*torch.max(policy_net(next_states), dim=1)
+        values = policy_net(states).gather(1, actions)
+
+        # large margin loss
+        large_margin_loss = torch.mean(torch.max(policy_net(states), dim=1) + margin_function(torch.argmax(policy_net(states), dim=1), actions) - policy_net(states).gather(1, actions))  
+        
+
+        return F.mse_loss(values, target) + large_margin_loss
+
+
 
 
 # Defining model hyper-parameters
@@ -90,7 +133,6 @@ demo_replay_memory = iterator.buffered_batch_iter(batch_size=FRAME_STACK, num_ep
 n_observation_feats =  FRAME_STACK * 64 * 64 #  64 * 64 * 3 * FRAME_STACK 
 print(f"num observation features: {n_observation_feats}")
 n_actions = 14
-done = False
 
 
 # Defining the Q networks
@@ -99,8 +141,9 @@ policy_net = policy_net.float()
 # target_net = DQfD(n_observations, n_actions).to(device)
 # target_net.load_state_dict(policy_net.state_dict())
 
-# optimizer = optim.AdamW(policy_net.parameters(), lr=LR, amsgrad=True)
+optimizer = optim.Adam(policy_net.parameters(), lr=LR, weight_decay=0.01) # Weight decay is L2 regularization
 replay_memory = ReplayMemory(1000)
+dqfd_loss = DQfD_Loss()
 
 
 # Defining epsilon greedy action selection
@@ -119,7 +162,7 @@ def select_action(state):
 
 
 # Optimizing the Q-network
-def optimize_model(replay_memory, demo_replay_memory, BETA = 0.9):
+def optimize_model(replay_memory, demo_replay_memory, BETA = 0, GAMMA=GAMMA):
 
     sample = random.random()
     if sample > BETA:
@@ -127,9 +170,9 @@ def optimize_model(replay_memory, demo_replay_memory, BETA = 0.9):
         batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones = sample_demo_batch(demo_replay_memory, BATCH_SIZE, grayscale=True)
         batch_states = torch.reshape(torch.as_tensor(np.array(batch_states)), (BATCH_SIZE,-1)).float()
         batch_next_states = torch.reshape(torch.as_tensor(np.array(batch_next_states)), (BATCH_SIZE,-1)).float()
-        batch_actions = np.array(batch_actions)
-        batch_rewards = np.array(batch_rewards)
-        batch_dones = np.array(batch_dones)
+        batch_actions = torch.as_tensor(np.array(batch_actions))
+        batch_rewards = torch.as_tensor(np.array(batch_rewards))
+        batch_dones = torch.as_tensor(np.array(batch_dones))
 
     else:
         print("Sampling from agent's replay memory")
@@ -140,29 +183,9 @@ def optimize_model(replay_memory, demo_replay_memory, BETA = 0.9):
     '''
 
 
-
-
-
-    # Compute a mask of non-final states and concatenate the batch elements
-    # (a final state would've been the one after which simulation ended)
-    non_final_mask = torch.tensor(tuple(map(lambda s: s is not None,
-                                          batch.next_state)), device=device, dtype=torch.bool)
-    non_final_next_states = torch.cat([s for s in batch.next_state
-                                                if s is not None])
-    state_batch = torch.cat(batch.state)
-    action_batch = torch.cat(batch.action)
-    reward_batch = torch.cat(batch.reward)
-    state_action_values = policy_net(state_batch).gather(1, action_batch)
-
-    next_state_values = torch.zeros(BATCH_SIZE, device=device)
+    # Compute loss
     with torch.no_grad():
-        next_state_values[non_final_mask] = target_net(non_final_next_states).max(1)[0]
-    # Compute the expected Q values
-    expected_state_action_values = (next_state_values * GAMMA) + reward_batch
-
-    # Compute Huber loss
-    criterion = nn.SmoothL1Loss()
-    loss = criterion(state_action_values, expected_state_action_values.unsqueeze(1))
+        loss = dqfd_loss(policy_net, target_net, batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones, GAMMA)
 
     # Optimize the model
     optimizer.zero_grad()
@@ -177,8 +200,17 @@ def optimize_model(replay_memory, demo_replay_memory, BETA = 0.9):
 for i in range(2):
     batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones = sample_demo_batch(demo_replay_memory, BATCH_SIZE, grayscale=True)
     
+
     batch_states = torch.reshape(torch.as_tensor(np.array(batch_states)), (BATCH_SIZE,-1)).float()
-    print(batch_states.shape) # Shape must be [batch_size * frame_stack * 64 * 64] OR [batch_size * in_dims] 
-    print(batch_actions)
-    # action = select_action(batch_states)
-    # print(action)
+    batch_next_states = torch.reshape(torch.as_tensor(np.array(batch_next_states)), (BATCH_SIZE,-1)).float()
+    batch_actions = torch.as_tensor(np.array(batch_actions))
+    batch_rewards = torch.as_tensor(np.array(batch_rewards))
+    batch_dones = torch.as_tensor(np.array(batch_dones))
+
+    print(f"Batch states shape {batch_states.shape}")
+    print(f"Batch actions shape {batch_actions.shape}")
+    print(f"Batch next states shape {batch_next_states.shape}")
+    print(f"Batch rewards shape {batch_rewards.shape}")
+    print(f"Batch dones shape {batch_dones.shape}")
+
+

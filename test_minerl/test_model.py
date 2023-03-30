@@ -69,9 +69,9 @@ class DQfD(nn.Module):
 # TAU is the update rate of the target network
 # LR is the learning rate of the AdamW optimizer
 FRAME_STACK = 2
-BATCH_SIZE = 64
+BATCH_SIZE = 32
 GAMMA = 0.99
-EPS = 0.5
+EPS = 0
 TAU = 0.005
 LR = 1e-4
 
@@ -87,7 +87,7 @@ iterator = BufferedBatchIter(data)
 demo_replay_memory = iterator.buffered_batch_iter(batch_size=FRAME_STACK, num_epochs=1) # The batch_size here refers to the number of consequtive frames
 
 
-n_observation_feats =  BATCH_SIZE * FRAME_STACK * 64 * 64 #  64 * 64 * 3 * FRAME_STACK 
+n_observation_feats =  FRAME_STACK * 64 * 64 #  64 * 64 * 3 * FRAME_STACK 
 print(f"num observation features: {n_observation_feats}")
 n_actions = 14
 done = False
@@ -109,17 +109,19 @@ def select_action(state):
     if sample > EPS:
         print("Exploiting")
         with torch.no_grad():
-            return torch.argmax(policy_net(state)) #policy_net(state).max(1)[1].view(1, 1)
+            return torch.argmax(policy_net(state), dim=1) #policy_net(state).max(1)[1].view(1, 1)
     else:
         print("Exploring")
         return random.choice(list(action_names.keys()))
         # return actions[action_names[random.choice(list(action_names.keys))]]
 
 
+print(policy_net)
 
 for i in range(2):
     batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones = sample_demo_batch(demo_replay_memory, BATCH_SIZE, grayscale=True)
     
-
     batch_states = torch.as_tensor(np.array(batch_states))
-    print(select_action(torch.flatten(batch_states).float()))
+    print(batch_states.shape) # Shape must be [batch_size * frame_stack * 64 * 64] OR [batch_size * in_dims] 
+    action = select_action(torch.reshape(batch_states, (batch_states.shape[0],-1)).float())
+    print(action)

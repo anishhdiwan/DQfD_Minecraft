@@ -71,7 +71,7 @@ class DQfD_Loss(nn.Module):
         super(DQfD_Loss, self).__init__()
 
     
-    def margin_function(agent_action, demo_action, margin=):
+    def margin_function(agent_action, demo_action):
         return torch.ge(agent_action, demo_action).float()
 
 
@@ -197,7 +197,7 @@ def optimize_model(replay_memory, demo_replay_memory, BETA = 0, GAMMA=GAMMA):
 
 
 
-for i in range(2):
+for i in range(1):
     batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones = sample_demo_batch(demo_replay_memory, BATCH_SIZE, grayscale=True)
     
 

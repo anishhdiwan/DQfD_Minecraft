@@ -161,7 +161,7 @@ def select_action(state):
 
 
 # Optimizing the Q-network
-def optimize_model(replay_memory, demo_replay_memory, BETA = 0, GAMMA=GAMMA):
+def optimize_model(policy_net, target_net, replay_memory, demo_replay_memory, BETA = 0, GAMMA=GAMMA):
     '''
     Optimize the Q-network either using the agent's self-explored replay memory or using demo data. 
     The variable BETA defines the probability of sampling from either one. This will later be replaced by some importance sampling factor
@@ -175,12 +175,12 @@ def optimize_model(replay_memory, demo_replay_memory, BETA = 0, GAMMA=GAMMA):
 
     else:
         print("Sampling from agent's replay memory")
-
-
+        # code to be added
 
     # Compute loss
     with torch.no_grad():
         loss = dqfd_loss(policy_net, target_net, batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones, GAMMA)
+        print(f"Loss: {loss}")
 
     # Optimize the model
     optimizer.zero_grad()
@@ -188,6 +188,7 @@ def optimize_model(replay_memory, demo_replay_memory, BETA = 0, GAMMA=GAMMA):
     # In-place gradient clipping
     torch.nn.utils.clip_grad_value_(policy_net.parameters(), 100)
     optimizer.step()
+    print("Optimizer steped ahead")
 
 
 
@@ -204,4 +205,6 @@ for i in range(1):
     print(f"Rewards shape {batch_rewards.shape}")
     print(f"Dones shape {batch_dones.shape}")
     print(f"Q Values shape: {q_values.shape}")
+
+    optimize_model(policy_net, target_net, replay_memory, demo_replay_memory, BETA = 0, GAMMA=GAMMA)
 

@@ -178,9 +178,9 @@ def optimize_model(policy_net, target_net, replay_memory, demo_replay_memory, BE
         # code to be added
 
     # Compute loss
-    with torch.no_grad():
-        loss = dqfd_loss(policy_net, target_net, batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones, GAMMA)
-        print(f"Loss: {loss}")
+    # with torch.no_grad():
+    loss = dqfd_loss(policy_net, target_net, batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones, GAMMA)
+    print(f"Loss: {loss}")
 
     # Optimize the model
     optimizer.zero_grad()

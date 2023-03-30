@@ -207,10 +207,10 @@ def sample_demo_batch(demo_replay_memory, batch_size, grayscale=False):
 	# batch_rewards = torch.as_tensor(np.array(batch_rewards))
 	# batch_dones = torch.as_tensor(np.array(batch_dones))
 
-	batch_states = torch.reshape(torch.tensor(np.array(batch_states), requires_grad=True), (batch_size,-1)).float()
-	batch_next_states = torch.reshape(torch.tensor(np.array(batch_next_states), requires_grad=True), (batch_size,-1)).float()
+	batch_states = torch.reshape(torch.tensor(np.array(batch_states), dtype=torch.float32, requires_grad=True), (batch_size,-1))
+	batch_next_states = torch.reshape(torch.tensor(np.array(batch_next_states), dtype=torch.float32, requires_grad=True), (batch_size,-1))
 	batch_actions = torch.tensor(np.array(batch_actions))
-	batch_rewards = torch.tensor(np.array(batch_rewards), requires_grad=True)
+	batch_rewards = torch.tensor(np.array(batch_rewards), dtype=torch.float32, requires_grad=True)
 	batch_dones = torch.tensor(np.array(batch_dones))
 
 	return batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones

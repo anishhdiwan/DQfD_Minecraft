@@ -71,7 +71,7 @@ class DQfD_Loss(nn.Module):
         super(DQfD_Loss, self).__init__()
 
 
-    def forward(self, policy_net, target_net, states, actions, rewards, next_states, dones, GAMMA):
+    def forward(self, policy_net, target_net, states, actions, rewards, next_states, dones, GAMMA, large_margin=True):
 
         # terminal_mask = torch.as_tensor(np.array(dones)).ge(1)
         # non_terminal_mask = ~terminal_mask
@@ -91,15 +91,18 @@ class DQfD_Loss(nn.Module):
         targets = rewards + GAMMA * torch.max(target_net(next_states), dim=1).values
         values = policy_net(states).gather(1,actions.view(-1,1)).view(-1,)
 
-        # large margin loss
+        if large_margin == True:
+            # large margin loss
+            lm1 = torch.max(policy_net(batch_states), dim=1).values # Q value of the agent's actions as per its current policy
+            lm2 = torch.eq(torch.argmax(policy_net(batch_states), dim=1), batch_actions).float() # Margin function: 0 if agent's action is the same as the expert's action 1 otherwise
+            lm3 = target_net(batch_states).gather(1, batch_actions.view(-1,1)).view(-1,) # Q value of the expert's action as per the target net (similar to why we use a frozen target)
 
-        lm1 = torch.max(policy_net(batch_states), dim=1).values # Q value of the agent's actions as per its current policy
-        lm2 = torch.eq(torch.argmax(policy_net(batch_states), dim=1), batch_actions).float() # Margin function: 0 if agent's action is the same as the expert's action 1 otherwise
-        lm3 = target_net(batch_states).gather(1, batch_actions.view(-1,1)).view(-1,) # Q value of the expert's action as per the target net (similar to why we use a frozen target)
+            large_margin_loss = torch.mean(lm1+lm2+lm3)        
 
-        large_margin_loss = torch.mean(lm1+lm2+lm3)        
-
-        return F.mse_loss(values, targets) + large_margin_loss
+            return F.mse_loss(values, targets) + large_margin_loss
+            
+        else:
+            return F.mse_loss(values, targets)
 
 
 
@@ -171,16 +174,16 @@ def optimize_model(policy_net, target_net, replay_memory, demo_replay_memory, BE
     if sample > BETA:
         print("Sampling from demo replay memory")
         batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones = sample_demo_batch(demo_replay_memory, BATCH_SIZE, grayscale=True)
+        loss = dqfd_loss(policy_net, target_net, batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones, GAMMA, large_margin=True)
+        print(f"Loss: {loss}")
 
 
     else:
         print("Sampling from agent's replay memory")
         # code to be added
+        loss = dqfd_loss(policy_net, target_net, batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones, GAMMA, large_margin=False)
+        print(f"Loss: {loss}")
 
-    # Compute loss
-    # with torch.no_grad():
-    loss = dqfd_loss(policy_net, target_net, batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones, GAMMA)
-    print(f"Loss: {loss}")
 
     # Optimize the model
     optimizer.zero_grad()
@@ -196,7 +199,7 @@ def optimize_model(policy_net, target_net, replay_memory, demo_replay_memory, BE
 for i in range(1):
     batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones = sample_demo_batch(demo_replay_memory, BATCH_SIZE, grayscale=True)
     
-    q_values = policy_net(batch_states)
+    # q_values = policy_net(batch_states)
 
     print("BATCH SHAPES")
     print(f"States shape {batch_states.shape}")
@@ -204,7 +207,7 @@ for i in range(1):
     print(f"Next states shape {batch_next_states.shape}")
     print(f"Rewards shape {batch_rewards.shape}")
     print(f"Dones shape {batch_dones.shape}")
-    print(f"Q Values shape: {q_values.shape}")
+    # print(f"Q Values shape: {q_values.shape}")
 
     optimize_model(policy_net, target_net, replay_memory, demo_replay_memory, BETA = 0, GAMMA=GAMMA)
 

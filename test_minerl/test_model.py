@@ -100,7 +100,7 @@ policy_net = policy_net.float()
 # target_net.load_state_dict(policy_net.state_dict())
 
 # optimizer = optim.AdamW(policy_net.parameters(), lr=LR, amsgrad=True)
-memory = ReplayMemory(1000)
+replay_memory = ReplayMemory(1000)
 
 
 # Defining epsilon greedy action selection
@@ -116,12 +116,69 @@ def select_action(state):
         # return actions[action_names[random.choice(list(action_names.keys))]]
 
 
-print(policy_net)
+
+
+# Optimizing the Q-network
+def optimize_model(replay_memory, demo_replay_memory, BETA = 0.9):
+
+    sample = random.random()
+    if sample > BETA:
+        print("Sampling from demo replay memory")
+        batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones = sample_demo_batch(demo_replay_memory, BATCH_SIZE, grayscale=True)
+        batch_states = torch.reshape(torch.as_tensor(np.array(batch_states)), (BATCH_SIZE,-1)).float()
+        batch_next_states = torch.reshape(torch.as_tensor(np.array(batch_next_states)), (BATCH_SIZE,-1)).float()
+        batch_actions = np.array(batch_actions)
+        batch_rewards = np.array(batch_rewards)
+        batch_dones = np.array(batch_dones)
+
+    else:
+        print("Sampling from agent's replay memory")
+
+    '''
+    Optimize the Q-network either using the agent's self-explored replay memory or using demo data. 
+    A variable defines the probability of sampling from either one 
+    '''
+
+
+
+
+
+    # Compute a mask of non-final states and concatenate the batch elements
+    # (a final state would've been the one after which simulation ended)
+    non_final_mask = torch.tensor(tuple(map(lambda s: s is not None,
+                                          batch.next_state)), device=device, dtype=torch.bool)
+    non_final_next_states = torch.cat([s for s in batch.next_state
+                                                if s is not None])
+    state_batch = torch.cat(batch.state)
+    action_batch = torch.cat(batch.action)
+    reward_batch = torch.cat(batch.reward)
+    state_action_values = policy_net(state_batch).gather(1, action_batch)
+
+    next_state_values = torch.zeros(BATCH_SIZE, device=device)
+    with torch.no_grad():
+        next_state_values[non_final_mask] = target_net(non_final_next_states).max(1)[0]
+    # Compute the expected Q values
+    expected_state_action_values = (next_state_values * GAMMA) + reward_batch
+
+    # Compute Huber loss
+    criterion = nn.SmoothL1Loss()
+    loss = criterion(state_action_values, expected_state_action_values.unsqueeze(1))
+
+    # Optimize the model
+    optimizer.zero_grad()
+    loss.backward()
+    # In-place gradient clipping
+    torch.nn.utils.clip_grad_value_(policy_net.parameters(), 100)
+    optimizer.step()
+
+
+
 
 for i in range(2):
     batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones = sample_demo_batch(demo_replay_memory, BATCH_SIZE, grayscale=True)
     
-    batch_states = torch.as_tensor(np.array(batch_states))
+    batch_states = torch.reshape(torch.as_tensor(np.array(batch_states)), (BATCH_SIZE,-1)).float()
     print(batch_states.shape) # Shape must be [batch_size * frame_stack * 64 * 64] OR [batch_size * in_dims] 
-    action = select_action(torch.reshape(batch_states, (batch_states.shape[0],-1)).float())
-    print(action)
+    print(batch_actions)
+    # action = select_action(batch_states)
+    # print(action)

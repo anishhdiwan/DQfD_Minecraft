@@ -6,6 +6,7 @@ from itertools import combinations
 from actions import action_names
 import cv2
 import numpy as np
+import torch
 
 
 ''' 
@@ -199,6 +200,12 @@ def sample_demo_batch(demo_replay_memory, batch_size, grayscale=False):
 			batch_dones.append(1)
 		else:
 			batch_dones.append(0)
+
+	batch_states = torch.reshape(torch.as_tensor(np.array(batch_states)), (batch_size,-1)).float()
+	batch_next_states = torch.reshape(torch.as_tensor(np.array(batch_next_states)), (batch_size,-1)).float()
+	batch_actions = torch.as_tensor(np.array(batch_actions))
+	batch_rewards = torch.as_tensor(np.array(batch_rewards))
+	batch_dones = torch.as_tensor(np.array(batch_dones))
 
 	return batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones
 

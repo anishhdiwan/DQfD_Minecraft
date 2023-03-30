@@ -70,13 +70,8 @@ class DQfD_Loss(nn.Module):
     def __init__(self):
         super(DQfD_Loss, self).__init__()
 
-    
-    def margin_function(agent_action, demo_action):
-        return torch.ge(agent_action, demo_action).float()
 
-
-
-    def forward(self, states, actions, rewards, next_states, dones, GAMMA):
+    def forward(self, policy_net, target_net, states, actions, rewards, next_states, dones, GAMMA):
 
         # terminal_mask = torch.as_tensor(np.array(dones)).ge(1)
         # non_terminal_mask = ~terminal_mask
@@ -93,14 +88,18 @@ class DQfD_Loss(nn.Module):
         # non_terminal_rewards = torch.masked_select(rewards, non_terminal_mask)
 
         # 1-step TD loss
-        targets = rewards + GAMMA*torch.max(policy_net(next_states), dim=1)
-        values = policy_net(states).gather(1, actions)
+        targets = rewards + GAMMA * torch.max(target_net(next_states), dim=1).values
+        values = policy_net(states).gather(1,actions.view(-1,1)).view(-1,)
 
         # large margin loss
-        large_margin_loss = torch.mean(torch.max(policy_net(states), dim=1) + margin_function(torch.argmax(policy_net(states), dim=1), actions) - policy_net(states).gather(1, actions))  
-        
 
-        return F.mse_loss(values, target) + large_margin_loss
+        lm1 = torch.max(policy_net(batch_states), dim=1).values # Q value of the agent's actions as per its current policy
+        lm2 = torch.eq(torch.argmax(policy_net(batch_states), dim=1), batch_actions).float() # Margin function: 0 if agent's action is the same as the expert's action 1 otherwise
+        lm3 = target_net(batch_states).gather(1, batch_actions.view(-1,1)).view(-1,) # Q value of the expert's action as per the target net (similar to why we use a frozen target)
+
+        large_margin_loss = torch.mean(lm1+lm2+lm3)        
+
+        return F.mse_loss(values, targets) + large_margin_loss
 
 
 
@@ -132,14 +131,14 @@ demo_replay_memory = iterator.buffered_batch_iter(batch_size=FRAME_STACK, num_ep
 
 n_observation_feats =  FRAME_STACK * 64 * 64 #  64 * 64 * 3 * FRAME_STACK 
 print(f"num observation features: {n_observation_feats}")
-n_actions = 14
+n_actions = 15
 
 
 # Defining the Q networks
 policy_net = DQfD(n_observation_feats, n_actions).to(device)
 policy_net = policy_net.float()
-# target_net = DQfD(n_observations, n_actions).to(device)
-# target_net.load_state_dict(policy_net.state_dict())
+target_net = DQfD(n_observation_feats, n_actions).to(device)
+target_net.load_state_dict(policy_net.state_dict())
 
 optimizer = optim.Adam(policy_net.parameters(), lr=LR, weight_decay=0.01) # Weight decay is L2 regularization
 replay_memory = ReplayMemory(1000)
@@ -163,24 +162,20 @@ def select_action(state):
 
 # Optimizing the Q-network
 def optimize_model(replay_memory, demo_replay_memory, BETA = 0, GAMMA=GAMMA):
+    '''
+    Optimize the Q-network either using the agent's self-explored replay memory or using demo data. 
+    The variable BETA defines the probability of sampling from either one. This will later be replaced by some importance sampling factor
+    '''
 
     sample = random.random()
     if sample > BETA:
         print("Sampling from demo replay memory")
         batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones = sample_demo_batch(demo_replay_memory, BATCH_SIZE, grayscale=True)
-        batch_states = torch.reshape(torch.as_tensor(np.array(batch_states)), (BATCH_SIZE,-1)).float()
-        batch_next_states = torch.reshape(torch.as_tensor(np.array(batch_next_states)), (BATCH_SIZE,-1)).float()
-        batch_actions = torch.as_tensor(np.array(batch_actions))
-        batch_rewards = torch.as_tensor(np.array(batch_rewards))
-        batch_dones = torch.as_tensor(np.array(batch_dones))
+
 
     else:
         print("Sampling from agent's replay memory")
 
-    '''
-    Optimize the Q-network either using the agent's self-explored replay memory or using demo data. 
-    A variable defines the probability of sampling from either one 
-    '''
 
 
     # Compute loss
@@ -200,17 +195,13 @@ def optimize_model(replay_memory, demo_replay_memory, BETA = 0, GAMMA=GAMMA):
 for i in range(1):
     batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones = sample_demo_batch(demo_replay_memory, BATCH_SIZE, grayscale=True)
     
+    q_values = policy_net(batch_states)
 
-    batch_states = torch.reshape(torch.as_tensor(np.array(batch_states)), (BATCH_SIZE,-1)).float()
-    batch_next_states = torch.reshape(torch.as_tensor(np.array(batch_next_states)), (BATCH_SIZE,-1)).float()
-    batch_actions = torch.as_tensor(np.array(batch_actions))
-    batch_rewards = torch.as_tensor(np.array(batch_rewards))
-    batch_dones = torch.as_tensor(np.array(batch_dones))
-
-    print(f"Batch states shape {batch_states.shape}")
-    print(f"Batch actions shape {batch_actions.shape}")
-    print(f"Batch next states shape {batch_next_states.shape}")
-    print(f"Batch rewards shape {batch_rewards.shape}")
-    print(f"Batch dones shape {batch_dones.shape}")
-
+    print("BATCH SHAPES")
+    print(f"States shape {batch_states.shape}")
+    print(f"Actions shape {batch_actions.shape}")
+    print(f"Next states shape {batch_next_states.shape}")
+    print(f"Rewards shape {batch_rewards.shape}")
+    print(f"Dones shape {batch_dones.shape}")
+    print(f"Q Values shape: {q_values.shape}")
 

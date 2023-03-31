@@ -1,30 +1,34 @@
-import math
+# import math
 import random
-import matplotlib
-import matplotlib.pyplot as plt
+# import matplotlib
+# import matplotlib.pyplot as plt
 from collections import namedtuple, deque
-from itertools import count
+# from itertools import count
+import numpy as np
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 
-import gym
-import minerl
-from minerl.data import BufferedBatchIter
+# import gym
+# import minerl
+# from minerl.data import BufferedBatchIter
 
 # Actions are defined as dictionaries in mineRL. A smaller list of actions is defined separately and these are imported here for simplicity
-from actions import actions, action_names
+from actions import action_names
 from demo_sampling import sample_demo_batch
 
-# Setting up a device
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# # Setting up a device
+# print(f"Is GPU available: {torch.cuda.is_available()}")
+# # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# device = "cpu"
 
-# Setting up the replay memory
+# Setting up a transition for the replay memory
 Transition = namedtuple('Transition', ('state', 'action', 'reward', 'next_state'))
 
 
+# Defining the replay memory class for the agent's self-explored transitions
 class ReplayMemory:
 
     def __init__(self, capacity):
@@ -39,6 +43,7 @@ class ReplayMemory:
 
     def __len__(self):
         return len(self.memory)
+
 
 # Defining the model class
 class DQfD(nn.Module):
@@ -57,83 +62,125 @@ class DQfD(nn.Module):
         return self.layer3(x)
 
 
-# Defining model hyper-parameters
-# BATCH_SIZE is the number of transitions sampled from the replay buffer
-# GAMMA is the discount factor as mentioned in the previous section
-# EPS is the epsilon greedy exploration probability
-# TAU is the update rate of the target network
-# LR is the learning rate of the AdamW optimizer
-FRAME_STACK = 2
-BATCH_SIZE = 64
-GAMMA = 0.99
-EPS = 0.01
-TAU = 0.005
-LR = 1e-4
+# Defining a modified DQfD loss function (1 step q learning loss + large margin classification loss + L2 regularization (implemented within adam))
+class DQfD_Loss(nn.Module):
+    def __init__(self):
+        super(DQfD_Loss, self).__init__()
 
 
-# Creating the environment (this may take a few minutes) and setting up the data sampling iterator
-env = gym.make('MineRLTreechop-v0')
+    def forward(self, policy_net, target_net, states, actions, rewards, next_states, dones, GAMMA, large_margin=True):
 
-# Initializing the generator
-# Download the dataset before running this script
-data = minerl.data.make('MineRLTreechop-v0')
-iterator = BufferedBatchIter(data)
-demo_replay_memory = iterator.buffered_batch_iter(batch_size=FRAME_STACK, num_epochs=1) # The batch_size here refers to the number of consequtive frames
+        # terminal_mask = torch.as_tensor(np.array(dones)).ge(1)
+        # non_terminal_mask = ~terminal_mask
 
 
-batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones = sample_demo_batch(demo_replay_memory, BATCH_SIZE)
+        # terminal_states = torch.masked_select(states.T, terminal_mask) # Not to be confused with terminal next_states. Terminal next_states are the actual terminal states. 
+        # terminating_actions = torch.masked_select(actions , terminal_mask)
+        # terminal_next_states = torch.masked_select(next_states.T, terminal_mask)
+        # terminal_rewards = torch.masked_select(rewards, terminal_mask)
+
+        # non_terminal_states = torch.masked_select(states.T, non_terminal_mask) # Not to be confused with terminal next_states. Terminal next_states are the actual terminal states. 
+        # non_terminating_actions = torch.masked_select(actions , non_terminal_mask)
+        # non_terminal_next_states = torch.masked_select(next_states.T, non_terminal_mask)
+        # non_terminal_rewards = torch.masked_select(rewards, non_terminal_mask)
+
+        # 1-step TD loss
+        targets = rewards + GAMMA * torch.max(target_net(next_states), dim=1).values
+        values = policy_net(states).gather(1,actions.view(-1,1)).view(-1,)
+
+        if large_margin == True:
+            # large margin loss
+            lm1 = torch.max(policy_net(states), dim=1).values # Q value of the agent's actions as per its current policy
+            lm2 = torch.eq(torch.argmax(policy_net(states), dim=1), actions).float() # Margin function: 0 if agent's action is the same as the expert's action 1 otherwise
+            lm3 = target_net(states).gather(1, actions.view(-1,1)).view(-1,) # Q value of the expert's action as per the target net (similar to why we use a frozen target)
+
+            large_margin_loss = torch.mean(lm1+lm2+lm3)        
+
+            return F.mse_loss(values, targets) + large_margin_loss
+            
+        else:
+            return F.mse_loss(values, targets)
 
 
-n_observation_feats = 64 * 64 * FRAME_STACK 
-n_actions = len(action_names)
-done = False
 
 
-# Defining the Q networks
-policy_net = DQfD(n_observations, n_actions).to(device)
-target_net = DQfD(n_observations, n_actions).to(device)
-target_net.load_state_dict(policy_net.state_dict())
+# # Defining model hyper-parameters
+# # BATCH_SIZE is the number of transitions sampled from the replay buffer
+# # GAMMA is the discount factor as mentioned in the previous section
+# # EPS is the epsilon greedy exploration probability
+# # TAU is the update rate of the target network
+# # LR is the learning rate of the AdamW optimizer
+# FRAME_STACK = 2
+# BATCH_SIZE = 32
+# GAMMA = 0.99
+# EPS = 0
+# TAU = 0.005
+# LR = 1e-4
 
-optimizer = optim.AdamW(policy_net.parameters(), lr=LR, amsgrad=True)
-memory = ReplayMemory(1000)
+
+# # Creating the environment (this may take a few minutes) and setting up the data sampling iterator
+# # env = gym.make('MineRLTreechop-v0')
+# # print("Gym.make done")
+
+# # Initializing the generator
+# # Download the dataset before running this script
+# data = minerl.data.make('MineRLTreechop-v0')
+# iterator = BufferedBatchIter(data)
+# demo_replay_memory = iterator.buffered_batch_iter(batch_size=FRAME_STACK, num_epochs=1) # The batch_size here refers to the number of consequtive frames
+
+
+# n_observation_feats =  FRAME_STACK * 64 * 64 #  64 * 64 * 3 * FRAME_STACK 
+# print(f"num observation features: {n_observation_feats}")
+# n_actions = 15
+
+
+# # Defining the Q networks
+# policy_net = DQfD(n_observation_feats, n_actions).to(device)
+# policy_net = policy_net.float()
+# target_net = DQfD(n_observation_feats, n_actions).to(device)
+# target_net.load_state_dict(policy_net.state_dict())
+
+# optimizer = optim.Adam(policy_net.parameters(), lr=LR, weight_decay=0.01) # Weight decay is L2 regularization
+# replay_memory = ReplayMemory(1000)
+# dqfd_loss = DQfD_Loss()
 
 
 # Defining epsilon greedy action selection
 def select_action(state):
     sample = random.random()
     if sample > EPS:
+        print("Exploiting")
         with torch.no_grad():
-            return policy_net(state).max(1)[1].view(1, 1)
+            return torch.argmax(policy_net(state), dim=1) #policy_net(state).max(1)[1].view(1, 1)
     else:
-        return actions[action_names[random.choice(list(action_names.keys))]]
+        print("Exploring")
+        return random.choice(list(action_names.keys()))
+        # return actions[action_names[random.choice(list(action_names.keys))]]
 
 
-def optimize_model(memory):
-    if len(memory) < BATCH_SIZE:
-        return
-    transitions = memory.sample(BATCH_SIZE)
-    batch = Transition(*zip(*transitions))
 
-    # Compute a mask of non-final states and concatenate the batch elements
-    # (a final state would've been the one after which simulation ended)
-    non_final_mask = torch.tensor(tuple(map(lambda s: s is not None,
-                                          batch.next_state)), device=device, dtype=torch.bool)
-    non_final_next_states = torch.cat([s for s in batch.next_state
-                                                if s is not None])
-    state_batch = torch.cat(batch.state)
-    action_batch = torch.cat(batch.action)
-    reward_batch = torch.cat(batch.reward)
-    state_action_values = policy_net(state_batch).gather(1, action_batch)
 
-    next_state_values = torch.zeros(BATCH_SIZE, device=device)
-    with torch.no_grad():
-        next_state_values[non_final_mask] = target_net(non_final_next_states).max(1)[0]
-    # Compute the expected Q values
-    expected_state_action_values = (next_state_values * GAMMA) + reward_batch
+# Optimizing the Q-network
+def optimize_model(optimizer, policy_net, target_net, replay_memory, demo_replay_memory, dqfd_loss, BATCH_SIZE = 32, BETA = 0, GAMMA=0.99):
+    '''
+    Optimize the Q-network either using the agent's self-explored replay memory or using demo data. 
+    The variable BETA defines the probability of sampling from either one. This will later be replaced by some importance sampling factor
+    '''
 
-    # Compute Huber loss
-    criterion = nn.SmoothL1Loss()
-    loss = criterion(state_action_values, expected_state_action_values.unsqueeze(1))
+    sample = random.random()
+    if sample > BETA:
+        print("Sampling from demo replay memory")
+        batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones = sample_demo_batch(demo_replay_memory, BATCH_SIZE, grayscale=True)
+        loss = dqfd_loss(policy_net, target_net, batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones, GAMMA, large_margin=True)
+        print(f"Loss: {loss}")
+
+
+    else:
+        print("Sampling from agent's replay memory")
+        # code to be added
+        loss = dqfd_loss(policy_net, target_net, batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones, GAMMA, large_margin=False)
+        print(f"Loss: {loss}")
+
 
     # Optimize the model
     optimizer.zero_grad()
@@ -141,48 +188,23 @@ def optimize_model(memory):
     # In-place gradient clipping
     torch.nn.utils.clip_grad_value_(policy_net.parameters(), 100)
     optimizer.step()
+    print("Optimizer steped ahead")
 
 
-# Main function
-num_episodes = 100
-num_steps = 10000
 
-for i_episode in range(num_episodes):
-    # Initialize the environment and get it's state
-    state = env.reset()
 
-    for t in range(num_steps):
-        action = select_action(state)
-        observation, reward, done, _ = env.step(action.item())
-        reward = torch.tensor([reward], device=device)
+# for i in range(1):
+#     batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones = sample_demo_batch(demo_replay_memory, BATCH_SIZE, grayscale=True)
+    
+#     # q_values = policy_net(batch_states)
 
-        if done:
-            next_state = None
-        else:
-            next_state = observation
+#     print("BATCH SHAPES")
+#     print(f"States shape {batch_states.shape}")
+#     print(f"Actions shape {batch_actions.shape}")
+#     print(f"Next states shape {batch_next_states.shape}")
+#     print(f"Rewards shape {batch_rewards.shape}")
+#     print(f"Dones shape {batch_dones.shape}")
+#     # print(f"Q Values shape: {q_values.shape}")
 
-        # Store the transition in memory
-        memory.append(state, action, next_state, reward)
+#     optimize_model(policy_net, target_net, replay_memory, demo_replay_memory, BETA = 0, GAMMA=GAMMA)
 
-        # Move to the next state
-        state = next_state
-
-        # Perform one step of the optimization (on the policy network)
-        optimize_model()
-
-        # Soft update of the target network's weights
-        # θ′ ← τ θ + (1 −τ )θ′
-        target_net_state_dict = target_net.state_dict()
-        policy_net_state_dict = policy_net.state_dict()
-        for key in policy_net_state_dict:
-            target_net_state_dict[key] = policy_net_state_dict[key]*TAU + target_net_state_dict[key]*(1-TAU)
-        target_net.load_state_dict(target_net_state_dict)
-
-        if done:
-            episode_durations.append(t + 1)
-            break
-
-print('Complete')
-plot_durations(show_result=True)
-plt.ioff()
-plt.show()

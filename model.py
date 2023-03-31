@@ -86,8 +86,8 @@ def select_action(state):
             return torch.argmax(policy_net(state), dim=1) #policy_net(state).max(1)[1].view(1, 1)
     else:
         print("Exploring")
-        return random.choice(list(action_names.keys()))
-        # return actions[action_names[random.choice(list(action_names.keys))]]
+        # return random.choice(list(action_names.keys()))
+        return actions[action_names[random.choice(list(action_names.keys))]]
 
 
 

@@ -83,7 +83,7 @@ def select_action(state, EPS, policy_net):
     if sample > EPS:
         print("Exploiting")
         with torch.no_grad():
-            return torch.argmax(policy_net(state), dim=1) #policy_net(state).max(1)[1].view(1, 1)
+            return torch.argmax(policy_net(state), dim=1).item() #policy_net(state).max(1)[1].view(1, 1)
     else:
         print("Exploring")
         return action_names[random.choice(list(action_names.keys()))]

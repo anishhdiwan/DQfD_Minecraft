@@ -29,7 +29,7 @@ device = "cpu"
 FRAME_STACK = 2
 BATCH_SIZE = 32
 GAMMA = 0.99
-EPS = 0.5
+EPS = 0
 TAU = 0.005
 LR = 1e-4
 
@@ -86,7 +86,7 @@ for i_episode in range(num_episodes):
     print(f"First state shape: {state.shape}")
 
     for t in range(num_steps):
-        action = model.select_action(state, EPS, policy_net)
+        action = model.select_action(torch.reshape(state, (1,-1)), EPS, policy_net)
         print(f"action: {action}")
         next_state = np.zeros(state.shape)
         reward = 0
@@ -109,10 +109,10 @@ for i_episode in range(num_episodes):
 
         # Store the transition in memory
         if not done:
-            replay_memory.append(state=state, action=action, next_state=next_state, reward=reward)
+            replay_memory.append(state, action, reward, next_state)
         else:
             next_state = pad_state(next_state, FRAME_STACK)
-            replay_memory.append(state=state, action=action, next_state=next_state, reward=reward)
+            replay_memory.append(state, action, reward, next_state)
 
         # Move to the next state
         state = next_state

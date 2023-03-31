@@ -7,7 +7,7 @@ import minerl
 from minerl.data import BufferedBatchIter
 
 import model # Import the classes and functions defined in model.py
-from utils import stack_observations
+from utils import stack_observations, pad_state
 from actions import actions as action_list
 # from demo_sampling import sample_demo_batch
 
@@ -88,7 +88,8 @@ for i_episode in range(num_episodes):
         for i in range(FRAME_STACK):
             if not done:
                 next_observation, next_reward, done, _ = env.step(action_list[action])
-                next_state[i] = next_observation
+                next_obs_gray = cv2.cvtColor(next_observation['pov'], cv2.COLOR_BGR2GRAY)
+                next_state[i] = next_obs_gray
                 reward += next_reward
 
         
@@ -101,7 +102,11 @@ for i_episode in range(num_episodes):
         #     next_state = observation
 
         # Store the transition in memory
-        memory.append(state, action, next_state, reward)
+        if not done:
+            memory.append(state, action, next_state, reward)
+        else:
+            next_state = pad_state(next_state, FRAME_STACK)
+            memory.append(state, action, next_state, reward)
 
         # Move to the next state
         state = next_state

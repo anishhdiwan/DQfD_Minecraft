@@ -8,8 +8,8 @@ import gym
 import minerl
 from minerl.data import BufferedBatchIter
 
-import model
-from demo_sampling import sample_demo_batch
+import model # Import the classes and functions defined in model.py
+# from demo_sampling import sample_demo_batch
 
 
 
@@ -64,16 +64,5 @@ dqfd_loss = model.DQfD_Loss()
 
 
 for i in range(1):
-    batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones = sample_demo_batch(demo_replay_memory, BATCH_SIZE, grayscale=True)
-    
-    # q_values = policy_net(batch_states)
 
-    print("BATCH SHAPES")
-    print(f"States shape {batch_states.shape}")
-    print(f"Actions shape {batch_actions.shape}")
-    print(f"Next states shape {batch_next_states.shape}")
-    print(f"Rewards shape {batch_rewards.shape}")
-    print(f"Dones shape {batch_dones.shape}")
-    # print(f"Q Values shape: {q_values.shape}")
-
-    model.optimize_model(optimizer, policy_net, target_net, replay_memory, demo_replay_memory, dqfd_loss, BATCH_SIZE = BATCH_SIZE, BETA = 0, GAMMA=GAMMA)
+    model.optimize_model(optimizer, policy_net, target_net, replay_memory, demo_replay_memory, dqfd_loss, BATCH_SIZE=BATCH_SIZE, BETA = 0, GAMMA=GAMMA)

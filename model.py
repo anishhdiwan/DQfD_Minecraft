@@ -78,7 +78,7 @@ class DQfD_Loss(nn.Module):
 
 
 # Defining epsilon greedy action selection
-def select_action(state, EPS):
+def select_action(state, EPS, policy_net):
     sample = random.random()
     if sample > EPS:
         print("Exploiting")
@@ -86,8 +86,8 @@ def select_action(state, EPS):
             return torch.argmax(policy_net(state), dim=1) #policy_net(state).max(1)[1].view(1, 1)
     else:
         print("Exploring")
-        # return random.choice(list(action_names.keys()))
-        return actions[action_names[random.choice(list(action_names.keys))]]
+        return action_names[random.choice(list(action_names.keys()))]
+        # return action_list[action_names[random.choice(list(action_names.keys()))]]
 
 
 
@@ -120,5 +120,5 @@ def optimize_model(optimizer, policy_net, target_net, replay_memory, demo_replay
     # In-place gradient clipping
     torch.nn.utils.clip_grad_value_(policy_net.parameters(), 100)
     optimizer.step()
-    print("Optimizer steped ahead")
+    # print("Optimizer steped ahead")
 

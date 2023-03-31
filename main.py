@@ -1,6 +1,7 @@
 import torch
 import torch.optim as optim
 import cv2
+import numpy as np
 
 import gym
 import minerl
@@ -85,7 +86,7 @@ for i_episode in range(num_episodes):
     print(f"First state shape: {state.shape}")
 
     for t in range(num_steps):
-        action = model.select_action(state, EPS)
+        action = model.select_action(state, EPS, policy_net)
         print(f"action: {action}")
         next_state = np.zeros(state.shape)
         reward = 0
@@ -108,10 +109,10 @@ for i_episode in range(num_episodes):
 
         # Store the transition in memory
         if not done:
-            replay_memory.append(state, action, next_state, reward)
+            replay_memory.append(state=state, action=action, next_state=next_state, reward=reward)
         else:
             next_state = pad_state(next_state, FRAME_STACK)
-            replay_memory.append(state, action, next_state, reward)
+            replay_memory.append(state=state, action=action, next_state=next_state, reward=reward)
 
         # Move to the next state
         state = next_state
@@ -135,7 +136,7 @@ for i_episode in range(num_episodes):
 
 
 
-print('Complete')
+# print('Complete')
 # plot_durations(show_result=True)
 # plt.ioff()
 # plt.show()

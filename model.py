@@ -78,7 +78,7 @@ class DQfD_Loss(nn.Module):
 
 
 # Defining epsilon greedy action selection
-def select_action(state):
+def select_action(state, EPS):
     sample = random.random()
     if sample > EPS:
         print("Exploiting")

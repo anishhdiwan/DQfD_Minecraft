@@ -1,6 +1,3 @@
-import matplotlib
-import matplotlib.pyplot as plt
-
 import torch
 import torch.optim as optim
 
@@ -66,3 +63,54 @@ dqfd_loss = model.DQfD_Loss()
 for i in range(1):
 
     model.optimize_model(optimizer, policy_net, target_net, replay_memory, demo_replay_memory, dqfd_loss, BATCH_SIZE=BATCH_SIZE, BETA = 0, GAMMA=GAMMA)
+
+
+'''
+
+# Main function
+num_episodes = 1
+num_steps = 1
+
+for i_episode in range(num_episodes):
+    # Initialize the environment and get it's state
+    state = env.reset()
+
+    for t in range(num_steps):
+        action = model.select_action(state)
+        observation, reward, done, _ = env.step(action)
+        reward = torch.tensor([reward], device=device)
+
+        if done:
+            next_state = None
+        else:
+            next_state = observation
+
+        # Store the transition in memory
+        memory.append(state, action, next_state, reward)
+
+        # Move to the next state
+        state = next_state
+
+        # Perform one step of the optimization (on the policy network)
+        model.optimize_model()
+
+        # Soft update of the target network's weights
+        # θ′ ← τ θ + (1 −τ )θ′
+        target_net_state_dict = target_net.state_dict()
+        policy_net_state_dict = policy_net.state_dict()
+        for key in policy_net_state_dict:
+            target_net_state_dict[key] = policy_net_state_dict[key]*TAU + target_net_state_dict[key]*(1-TAU)
+        target_net.load_state_dict(target_net_state_dict)
+
+        if done:
+            episode_durations.append(t + 1)
+            break
+
+
+
+print('Complete')
+plot_durations(show_result=True)
+plt.ioff()
+plt.show()
+
+'''

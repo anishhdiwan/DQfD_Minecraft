@@ -19,6 +19,10 @@ Transition = namedtuple('Transition', ('state', 'action', 'reward', 'next_state'
 
 # Defining the replay memory class for the agent's self-explored transitions
 class ReplayMemory:
+    '''
+    Replay memory contains states and next_states that are stacked with FRAME_STACK number of observations. These are numpy arrays and not tensors.
+    They are converted to tensors during optimization
+    '''
 
     def __init__(self, capacity):
         self.memory = deque([], maxlen=capacity)
@@ -28,6 +32,7 @@ class ReplayMemory:
         self.memory.append(Transition(*args))
 
     def sample(self, batch_size):
+        # samle returns a list of transitions with batch_size number of elements
         return random.sample(self.memory, batch_size)
 
     def __len__(self):
@@ -93,7 +98,7 @@ def select_action(state, EPS, policy_net):
 
 
 # Defining the optimization for the Q-network
-def optimize_model(optimizer, policy_net, target_net, replay_memory, demo_replay_memory, dqfd_loss, BATCH_SIZE = 32, BETA = 0, GAMMA=0.99):
+def optimize_model(optimizer, policy_net, target_net, replay_memory, demo_replay_memory, dqfd_loss, BATCH_SIZE = 32, BETA = 0.5, GAMMA=0.99):
     '''
     Optimize the Q-network either using the agent's self-explored replay memory or using demo data. 
     The variable BETA defines the probability of sampling from either one. This will later be replaced by some importance sampling factor
@@ -130,11 +135,11 @@ def optimize_model(optimizer, policy_net, target_net, replay_memory, demo_replay
         batch_rewards = torch.tensor(np.array(batch_rewards), dtype=torch.float32, requires_grad=True)
         batch_dones = torch.tensor(np.array(batch_dones))
 
-        print(batch_states.shape)
-        print(batch_next_states.shape)
-        print(batch_actions.shape)
-        print(batch_rewards.shape)
-        print(batch_dones.shape)
+        # print(batch_states.shape)
+        # print(batch_next_states.shape)
+        # print(batch_actions.shape)
+        # print(batch_rewards.shape)
+        # print(batch_dones.shape)
 
         loss = dqfd_loss(policy_net, target_net, batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones, GAMMA, large_margin=False)
         print(f"Loss: {loss}")

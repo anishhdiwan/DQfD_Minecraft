@@ -29,7 +29,7 @@ device = "cpu"
 FRAME_STACK = 2
 BATCH_SIZE = 32
 GAMMA = 0.99
-EPS = 0
+EPS = 0.5
 TAU = 0.005
 LR = 1e-4
 
@@ -103,13 +103,6 @@ for i_episode in range(num_episodes):
                 reward += next_reward
 
         print(f"Completed {FRAME_STACK} transitions")
-        # reward = torch.tensor([reward], device=device)
-
-        # if done:
-        #     # next_state = None
-        #     # STOP EPISODE
-        # else:
-        #     next_state = observation
 
         # Store the transition in memory
         if not done:
@@ -124,7 +117,7 @@ for i_episode in range(num_episodes):
         state = next_state
 
         # Perform one step of the optimization (on the policy network)
-        model.optimize_model(optimizer, policy_net, target_net, replay_memory, demo_replay_memory, dqfd_loss, BATCH_SIZE=1, BETA = 1, GAMMA=GAMMA)
+        model.optimize_model(optimizer, policy_net, target_net, replay_memory, demo_replay_memory, dqfd_loss, BATCH_SIZE=BATCH_SIZE, BETA = 0.5, GAMMA=GAMMA)
         print("Completed one step of optimization")
 
         # Soft update of the target network's weights

@@ -67,17 +67,6 @@ def get_aggregate_action(actions, cam_threshold=2.0):
 			aggregate_action['camera'] = [max(heading) ,cam_dir]
 
 
-	# print(aggregate_action)
-	# print(aggregate_reward)
-
-	# cam = aggregate_action.pop('camera')
-	# max_idx = [i for i, x in enumerate(cam) if x == max(cam)]
-	# cam_dir = random.choice(max_idx) # 0,1,2,3 corresponds to l,r,u,d
-
-	# # aggregate_action = dict(sorted(aggregate_action.items(), key=lambda item: item[1]))
-	# aggregate_action['camera'] = [max(cam) ,cam_dir]
-
-
 	# Popping out any action that was not chosen
 	noop_list = []
 	for key, value in aggregate_action.items():
@@ -109,12 +98,6 @@ def map_aggregate_action(aggregate_action):
 	'''
 	Function to map an aggregate action to one of the agent's available actions 
 	'''
-
-	# # Mapping camera directions to the movement and dropping out the 
-	# cam_dirs = {0:'look-left', 1:'look-right', 2:'look-up', 3:'look-down'}
-	# if 'camera' in aggregate_action:
-	# 	cam = aggregate_action.pop('camera')
-	# 	aggregate_action[cam_dirs[cam[1]]] = cam[0]
 
 	# If empty then select no-operation action
 	if len(aggregate_action.keys()) == 0:
@@ -151,13 +134,6 @@ def map_aggregate_action(aggregate_action):
 
 
 	return action
-
-
-# # Initializing the generator
-# # Download the dataset before running this script
-# data = minerl.data.make('MineRLTreechop-v0')
-# iterator = BufferedBatchIter(data)
-# demo_replay_memory = iterator.buffered_batch_iter(batch_size=frame_stack, num_epochs=1) # The batch_size here refers to the number of consequtive frames
 
 
 def sample_demo_batch(demo_replay_memory, batch_size, grayscale=False):

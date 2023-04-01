@@ -27,7 +27,7 @@ device = "cpu"
 # TAU is the update rate of the target network
 # LR is the learning rate of the AdamW optimizer
 FRAME_STACK = 2
-BATCH_SIZE = 32
+BATCH_SIZE = 2
 GAMMA = 0.99
 EPS = 0.5
 TAU = 0.005
@@ -76,7 +76,7 @@ dqfd_loss = model.DQfD_Loss()
 
 # Main function
 num_episodes = 1
-num_steps = 1
+num_steps = 10
 
 for i_episode in range(num_episodes):
 
@@ -116,6 +116,12 @@ for i_episode in range(num_episodes):
         # Move to the next state
         state = next_state
 
+        # Sampling from the demo replay until the replay memory has at least BATCH_SIZE number of transitions
+        if len(replay_memory) < BATCH_SIZE:
+            BETA = 0.5
+        else:
+            BETA = 0.5
+
         # Perform one step of the optimization (on the policy network)
         model.optimize_model(optimizer, policy_net, target_net, replay_memory, demo_replay_memory, dqfd_loss, BATCH_SIZE=BATCH_SIZE, BETA = 0.5, GAMMA=GAMMA)
         print("Completed one step of optimization")
@@ -132,6 +138,8 @@ for i_episode in range(num_episodes):
         if done:
             # episode_durations.append(t + 1)
             break
+
+        print("--------------")
 
 
 

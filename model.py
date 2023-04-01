@@ -42,17 +42,90 @@ class ReplayMemory:
 # Defining the model class
 class DQfD(nn.Module):
 
-    def __init__(self, n_observation_feats, n_actions):
+    def __init__(self, n_observation_feats, n_actions, batch_size):
         super(DQfD, self).__init__()
         self.layer1 = nn.Linear(n_observation_feats, 128)
         self.layer2 = nn.Linear(128, 128)
         self.layer3 = nn.Linear(128, n_actions)
+        self.batch_size = batch_size
 
     # Called with either one element to determine next action, or a batch
-    def forward(self, x):
+    def forward(self, x, for_optimization=True):
+        # When using for optimization, a batch of inputs is passed in. In this case, reshape. When using for selecting actions, only one state is 
+        # passed. In this case, the shape is already correctly set. Hence no reshaping is needed.
+        if for_optimization: 
+            x = torch.reshape(x, (self.batch_size,-1))
         x = F.relu(self.layer1(x))
         x = F.relu(self.layer2(x))
         return self.layer3(x)
+
+
+# Defining the dueling network architecture
+class dueling_net(nn.Module):
+    '''
+    Dueling network architecture from "Dueling Network Architectures for Deep Reinforcement Learning". Conv layers modified to take shape of 64 x 64
+    https://nn.labml.ai/rl/dqn/model.html
+    '''
+    def __init__(self, n_actions, frame_stack):
+        super(DQfD, self).__init__()
+
+        # Conv output = [(W−K+2P)/S]+1 where W = input size, K = kernel size, P = padding, S = stride
+        self.FRAME_STACK = frame_stack
+        # self.batch_size = batch_size
+
+        self.conv = nn.Sequential(
+            # The first convolution layer takes a 64 x 64 frame and produces a 15 x 15 frame
+            nn.Conv2d(in_channels=self.FRAME_STACK, out_channels=32, kernel_size=8, stride=4),
+            nn.ReLU(),
+
+            # The second convolution layer takes a 15 x 15 and produces a 6 x 6 frame
+            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=5, stride=2),
+            nn.ReLU(),
+
+            # The third convolution layer takes a 6 x 6 frame and produces a 5 x 5 frame
+            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=2, stride=1),
+            nn.ReLU(),
+        )
+
+        # A fully connected layer takes the flattened
+        self.lin = nn.Linear(in_features=5 * 5 * 64, out_features=512)
+        self.activation = nn.ReLU()
+
+        # This head gives the state value $V$
+        self.state_value = nn.Sequential(
+            nn.Linear(in_features=512, out_features=256),
+            nn.ReLU(),
+            nn.Linear(in_features=256, out_features=1),
+        )
+
+        # This head gives the action value $A$
+        self.action_value = nn.Sequential(
+            nn.Linear(in_features=512, out_features=256),
+            nn.ReLU(),
+            nn.Linear(in_features=256, out_features=n_actions),
+        )
+
+
+
+    def forward(self, obs: torch.Tensor):
+        # Convolution
+        h = self.conv(obs)
+        # Reshape for linear layers
+        h = h.reshape((-1, 5 * 5 * 64))
+
+        # Linear layer
+        h = self.activation(self.lin(h))
+
+        # $A$
+        action_value = self.action_value(h)
+        # $V$
+        state_value = self.state_value(h)
+
+        
+        action_score_centered = action_value - action_value.mean(dim=-1, keepdim=True)
+        q = state_value + action_score_centered
+
+        return q
 
 
 
@@ -88,7 +161,7 @@ def select_action(state, EPS, policy_net):
     if sample > EPS:
         print("Exploiting")
         with torch.no_grad():
-            return torch.argmax(policy_net(state), dim=1).item() #policy_net(state).max(1)[1].view(1, 1)
+            return torch.argmax(policy_net(state, for_optimization=False), dim=1).item() #policy_net(state).max(1)[1].view(1, 1)
     else:
         print("Exploring")
         return action_names[random.choice(list(action_names.keys()))]
@@ -129,8 +202,10 @@ def optimize_model(optimizer, policy_net, target_net, replay_memory, demo_replay
             batch_rewards.append(batch_transitions[i].reward)
             batch_actions.append(batch_transitions[i].action)
 
-        batch_states = torch.reshape(torch.tensor(np.array(batch_states), dtype=torch.float32, requires_grad=True), (BATCH_SIZE,-1))
-        batch_next_states = torch.reshape(torch.tensor(np.array(batch_next_states), dtype=torch.float32, requires_grad=True), (BATCH_SIZE,-1))
+        # batch_states = torch.reshape(torch.tensor(np.array(batch_states), dtype=torch.float32, requires_grad=True), (BATCH_SIZE,-1))
+        batch_states = torch.tensor(np.array(batch_states), dtype=torch.float32, requires_grad=True)
+        # batch_next_states = torch.reshape(torch.tensor(np.array(batch_next_states), dtype=torch.float32, requires_grad=True), (BATCH_SIZE,-1))
+        batch_next_states = torch.tensor(np.array(batch_next_states), dtype=torch.float32, requires_grad=True)
         batch_actions = torch.tensor(np.array(batch_actions))
         batch_rewards = torch.tensor(np.array(batch_rewards), dtype=torch.float32, requires_grad=True)
         batch_dones = torch.tensor(np.array(batch_dones))

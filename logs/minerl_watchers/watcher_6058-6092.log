@@ -1,0 +1,8 @@
+2023-04-01 17:12:46 LAPTOP-HLK0F60I process_watcher[6149] INFO Process watcher started between parent 6058 and child 6092 
+2023-04-01 17:13:12 LAPTOP-HLK0F60I process_watcher[6149] INFO Parent is not running, hence we need terminate the child.
+2023-04-01 17:13:12 LAPTOP-HLK0F60I process_watcher[6149] INFO About to reap process tree of 6092:launchClient.sh:/bin/bash i sleeping, owner 5846, printing process tree status in termination order:
+2023-04-01 17:13:12 LAPTOP-HLK0F60I process_watcher[6149] INFO 	-6097:java:/usr/lib/jvm/java-8-openjdk-amd64/jre/bin/java i sleeping, owner 6092
+2023-04-01 17:13:12 LAPTOP-HLK0F60I process_watcher[6149] INFO 	-6092:launchClient.sh:/bin/bash i sleeping, owner 5846
+2023-04-01 17:13:12 LAPTOP-HLK0F60I process_watcher[6149] INFO Trying to SIGTERM 6097:java:/usr/lib/jvm/java-8-openjdk-amd64/jre/bin/java i sleeping, owner 6092
+2023-04-01 17:13:12 LAPTOP-HLK0F60I process_watcher[6149] INFO Process psutil.Process(pid=6097, name='java', status='terminated', started='17:12:45') terminated with exit code None
+2023-04-01 17:13:12 LAPTOP-HLK0F60I process_watcher[6149] INFO Process psutil.Process(pid=6092, name='launchClient.sh', status='terminated', started='17:12:45') does not exist or is zombie.

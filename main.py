@@ -53,11 +53,19 @@ print(f"num actions: {n_actions}")
 
 
 
-# Defining the Q networks
-policy_net = model.DQfD(n_observation_feats, n_actions).to(device)
+# Defining the simple model Q networks
+policy_net = model.DQfD(n_observation_feats, n_actions, BATCH_SIZE).to(device)
 policy_net = policy_net.float()
-target_net = model.DQfD(n_observation_feats, n_actions).to(device)
+target_net = model.DQfD(n_observation_feats, n_actions, BATCH_SIZE).to(device)
 target_net.load_state_dict(policy_net.state_dict())
+
+
+# Defining the duelling network Q networks
+# policy_net = model.dueling_net(n_actions, FRAME_STACK).to(device)
+# policy_net = policy_net.float()
+# target_net = model.dueling_net(n_actions, FRAME_STACK).to(device)
+# target_net.load_state_dict(policy_net.state_dict())
+
 
 # Defining the loss function and optimizer
 optimizer = optim.Adam(policy_net.parameters(), lr=LR, weight_decay=0.0001) # Weight decay is L2 regularization
@@ -118,7 +126,7 @@ for i_episode in range(num_episodes):
 
         # Sampling from the demo replay until the replay memory has at least BATCH_SIZE number of transitions
         if len(replay_memory) < BATCH_SIZE:
-            BETA = 0.5
+            BETA = 0
         else:
             BETA = 0.5
 

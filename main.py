@@ -29,7 +29,7 @@ device = "cpu"
 FRAME_STACK = 2
 BATCH_SIZE = 2
 GAMMA = 0.99
-EPS = 0.5
+EPS = 0.01
 TAU = 0.005
 LR = 1e-4
 
@@ -48,37 +48,32 @@ replay_memory = model.ReplayMemory(1000)
 
 n_observation_feats =  FRAME_STACK * 64 * 64 #  64 * 64 * 3 * FRAME_STACK 
 n_actions = 15
-print(f"num observation features: {n_observation_feats}")
-print(f"num actions: {n_actions}")
+# print(f"num observation features: {n_observation_feats}")
+# print(f"num actions: {n_actions}")
 
 
+# Choosing a deep architecture:
+# architecture = "simple"  
+architecture = "duelling_net"
 
-# Defining the simple model Q networks
-policy_net = model.DQfD(n_observation_feats, n_actions, BATCH_SIZE).to(device)
-policy_net = policy_net.float()
-target_net = model.DQfD(n_observation_feats, n_actions, BATCH_SIZE).to(device)
-target_net.load_state_dict(policy_net.state_dict())
+if architecture == "simple":
+    # Defining the simple model Q networks
+    policy_net = model.DQfD(n_observation_feats, n_actions, BATCH_SIZE).to(device)
+    policy_net = policy_net.float()
+    target_net = model.DQfD(n_observation_feats, n_actions, BATCH_SIZE).to(device)
+    target_net.load_state_dict(policy_net.state_dict())
 
-
-# Defining the duelling network Q networks
-# policy_net = model.dueling_net(n_actions, FRAME_STACK).to(device)
-# policy_net = policy_net.float()
-# target_net = model.dueling_net(n_actions, FRAME_STACK).to(device)
-# target_net.load_state_dict(policy_net.state_dict())
+elif architecture == "duelling_net":
+    # Defining the duelling network Q networks
+    policy_net = model.dueling_net(n_actions, FRAME_STACK).to(device)
+    policy_net = policy_net.float()
+    target_net = model.dueling_net(n_actions, FRAME_STACK).to(device)
+    target_net.load_state_dict(policy_net.state_dict())
 
 
 # Defining the loss function and optimizer
 optimizer = optim.Adam(policy_net.parameters(), lr=LR, weight_decay=0.0001) # Weight decay is L2 regularization
 dqfd_loss = model.DQfD_Loss()
-
-
-
-
-# for i in range(1):
-
-#     # model.optimize_model(optimizer, policy_net, target_net, replay_memory, demo_replay_memory, dqfd_loss, BATCH_SIZE=BATCH_SIZE, BETA = 0, GAMMA=GAMMA)
-#     batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones = sample_demo_batch(demo_replay_memory, BATCH_SIZE, grayscale=True)
-#     print(batch_states.shape)
 
 
 
@@ -98,7 +93,14 @@ for i_episode in range(num_episodes):
 
     for t in range(num_steps):
         # action = model.select_action(torch.reshape(state, (1,-1)), EPS, policy_net)
-        action = model.select_action(torch.reshape(torch.tensor(state, dtype=torch.float32), (1,-1)), EPS, policy_net)
+        if architecture == "simple":
+            action = model.select_action(torch.reshape(torch.tensor(state, dtype=torch.float32), (1,-1)), EPS, policy_net)
+        elif architecture == "duelling_net":
+            temp = torch.tensor(state, dtype=torch.float32)
+            shape = list(temp.shape)
+            shape.insert(0,1)
+            action = model.select_action(temp.view(tuple(shape)), EPS, policy_net)
+        
         print(f"action: {action}")
         next_state = np.zeros(state.shape)
         reward = 0
@@ -131,7 +133,7 @@ for i_episode in range(num_episodes):
             BETA = 0.5
 
         # Perform one step of the optimization (on the policy network)
-        model.optimize_model(optimizer, policy_net, target_net, replay_memory, demo_replay_memory, dqfd_loss, BATCH_SIZE=BATCH_SIZE, BETA = 0.5, GAMMA=GAMMA)
+        model.optimize_model(optimizer, policy_net, target_net, replay_memory, demo_replay_memory, dqfd_loss, BATCH_SIZE=BATCH_SIZE, BETA = BETA, GAMMA=GAMMA)
         print("Completed one step of optimization")
 
         # Soft update of the target network's weights
@@ -149,11 +151,3 @@ for i_episode in range(num_episodes):
 
         print("--------------")
 
-
-
-# print('Complete')
-# plot_durations(show_result=True)
-# plt.ioff()
-# plt.show()
-# print(f"Sampling replay_memory: {replay_memory.sample(1)[0].state.shape}")
-# print(f"Sampling replay_memory: {replay_memory.sample(1)[0].next_state.shape}")

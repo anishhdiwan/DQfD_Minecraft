@@ -67,7 +67,7 @@ class dueling_net(nn.Module):
     https://nn.labml.ai/rl/dqn/model.html
     '''
     def __init__(self, n_actions, frame_stack):
-        super(DQfD, self).__init__()
+        super(dueling_net, self).__init__()
 
         # Conv output = [(W−K+2P)/S]+1 where W = input size, K = kernel size, P = padding, S = stride
         self.FRAME_STACK = frame_stack
@@ -107,7 +107,7 @@ class dueling_net(nn.Module):
 
 
 
-    def forward(self, obs: torch.Tensor):
+    def forward(self, obs: torch.Tensor, for_optimization=True):
         # Convolution
         h = self.conv(obs)
         # Reshape for linear layers
@@ -120,11 +120,11 @@ class dueling_net(nn.Module):
         action_value = self.action_value(h)
         # $V$
         state_value = self.state_value(h)
-
         
         action_score_centered = action_value - action_value.mean(dim=-1, keepdim=True)
         q = state_value + action_score_centered
 
+        # print("duelling net forward pass completed")
         return q
 
 

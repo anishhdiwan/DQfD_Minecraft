@@ -110,6 +110,32 @@ def optimize_model(optimizer, policy_net, target_net, replay_memory, demo_replay
     else:
         print("Sampling from agent's replay memory")
         # code to be added
+        batch_transitions = replay_memory.sample(BATCH_SIZE)
+
+        batch_states = []
+        batch_actions = []
+        batch_rewards = []
+        batch_next_states = []
+        batch_dones = []
+
+        for i in range(BATCH_SIZE):
+            batch_states.append(batch_transitions[i].state)
+            batch_next_states.append(batch_transitions[i].next_state)
+            batch_rewards.append(batch_transitions[i].reward)
+            batch_actions.append(batch_transitions[i].action)
+
+        batch_states = torch.reshape(torch.tensor(np.array(batch_states), dtype=torch.float32, requires_grad=True), (BATCH_SIZE,-1))
+        batch_next_states = torch.reshape(torch.tensor(np.array(batch_next_states), dtype=torch.float32, requires_grad=True), (BATCH_SIZE,-1))
+        batch_actions = torch.tensor(np.array(batch_actions))
+        batch_rewards = torch.tensor(np.array(batch_rewards), dtype=torch.float32, requires_grad=True)
+        batch_dones = torch.tensor(np.array(batch_dones))
+
+        print(batch_states.shape)
+        print(batch_next_states.shape)
+        print(batch_actions.shape)
+        print(batch_rewards.shape)
+        print(batch_dones.shape)
+
         loss = dqfd_loss(policy_net, target_net, batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones, GAMMA, large_margin=False)
         print(f"Loss: {loss}")
 

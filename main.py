@@ -68,7 +68,9 @@ dqfd_loss = model.DQfD_Loss()
 
 # for i in range(1):
 
-#     model.optimize_model(optimizer, policy_net, target_net, replay_memory, demo_replay_memory, dqfd_loss, BATCH_SIZE=BATCH_SIZE, BETA = 0, GAMMA=GAMMA)
+#     # model.optimize_model(optimizer, policy_net, target_net, replay_memory, demo_replay_memory, dqfd_loss, BATCH_SIZE=BATCH_SIZE, BETA = 0, GAMMA=GAMMA)
+#     batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones = sample_demo_batch(demo_replay_memory, BATCH_SIZE, grayscale=True)
+#     print(batch_states.shape)
 
 
 
@@ -82,11 +84,13 @@ for i_episode in range(num_episodes):
     obs = env.reset()
     print("Reset Successful")
     obs_gray = cv2.cvtColor(obs['pov'], cv2.COLOR_BGR2GRAY)
-    state = torch.tensor(stack_observations(obs_gray, FRAME_STACK), dtype=torch.float32) # Stacking observations together to form a state
+    # state = torch.tensor(stack_observations(obs_gray, FRAME_STACK), dtype=torch.float32) # Stacking observations together to form a state
+    state = stack_observations(obs_gray, FRAME_STACK)
     print(f"First state shape: {state.shape}")
 
     for t in range(num_steps):
-        action = model.select_action(torch.reshape(state, (1,-1)), EPS, policy_net)
+        # action = model.select_action(torch.reshape(state, (1,-1)), EPS, policy_net)
+        action = model.select_action(torch.reshape(torch.tensor(state, dtype=torch.float32), (1,-1)), EPS, policy_net)
         print(f"action: {action}")
         next_state = np.zeros(state.shape)
         reward = 0
@@ -99,7 +103,7 @@ for i_episode in range(num_episodes):
                 reward += next_reward
 
         print(f"Completed {FRAME_STACK} transitions")
-        reward = torch.tensor([reward], device=device)
+        # reward = torch.tensor([reward], device=device)
 
         # if done:
         #     # next_state = None
@@ -109,8 +113,10 @@ for i_episode in range(num_episodes):
 
         # Store the transition in memory
         if not done:
+            # next_state = torch.tensor(next_state, dtype=torch.float32, requires_grad=True)
             replay_memory.append(state, action, reward, next_state)
         else:
+            # next_state = torch.tensor(pad_state(next_state, FRAME_STACK), dtype=torch.float32, requires_grad=True)
             next_state = pad_state(next_state, FRAME_STACK)
             replay_memory.append(state, action, reward, next_state)
 
@@ -118,7 +124,7 @@ for i_episode in range(num_episodes):
         state = next_state
 
         # Perform one step of the optimization (on the policy network)
-        model.optimize_model(optimizer, policy_net, target_net, replay_memory, demo_replay_memory, dqfd_loss, BATCH_SIZE=BATCH_SIZE, BETA = 0, GAMMA=GAMMA)
+        model.optimize_model(optimizer, policy_net, target_net, replay_memory, demo_replay_memory, dqfd_loss, BATCH_SIZE=1, BETA = 1, GAMMA=GAMMA)
         print("Completed one step of optimization")
 
         # Soft update of the target network's weights
@@ -140,4 +146,5 @@ for i_episode in range(num_episodes):
 # plot_durations(show_result=True)
 # plt.ioff()
 # plt.show()
-print(f"Sampling replay_memory: {replay_memory.sample(1)}")
+# print(f"Sampling replay_memory: {replay_memory.sample(1)[0].state.shape}")
+# print(f"Sampling replay_memory: {replay_memory.sample(1)[0].next_state.shape}")

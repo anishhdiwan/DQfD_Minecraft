@@ -19,8 +19,8 @@ from torch.utils.tensorboard import SummaryWriter
 
 # Setting up a device
 print(f"Is GPU available: {torch.cuda.is_available()}")
-# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-device = "cpu"
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# device = "cpu"
 
 
 # Defining model hyper-parameters
@@ -35,9 +35,9 @@ GAMMA = 0.99
 EPS = 0.01
 TAU = 0.005
 LR = 1e-4
-num_episodes = 10
-num_steps = 1000
-pre_train_steps = 500
+num_episodes = 2
+num_steps = 10
+pre_train_steps = 5
 RUN_NAME = "Test_Run_2"
 logdir = f"runs/frame_stack:{FRAME_STACK}_|batch_size:{BATCH_SIZE}_|gamma:{GAMMA}_|eps:{EPS}_|tau:{TAU}_|lr:{LR}_|episodes:{num_episodes}_|steps:{num_steps}_|run:{RUN_NAME}"
 
@@ -55,7 +55,7 @@ data = minerl.data.make('MineRLTreechop-v0')
 iterator = BufferedBatchIter(data)
 demo_replay_memory = iterator.buffered_batch_iter(batch_size=FRAME_STACK, num_epochs=1) # The batch_size here refers to the number of consequtive frames
 replay_memory = model.ReplayMemory(1000)
-print("Replay memory & Demo replay memory initialized")
+print("Replay memory & demo replay memory initialized")
 
 n_observation_feats =  FRAME_STACK * 64 * 64 #  64 * 64 * 3 * FRAME_STACK 
 n_actions = 15

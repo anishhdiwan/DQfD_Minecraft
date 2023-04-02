@@ -13,6 +13,11 @@ from actions import action_names
 from demo_sampling import sample_demo_batch
 
 
+# Setting up a device
+# print(f"Is GPU available: {torch.cuda.is_available()}")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# device = "cpu"
+
 # Setting up a transition for the replay memory
 Transition = namedtuple('Transition', ('state', 'action', 'reward', 'next_state'))
 
@@ -161,6 +166,7 @@ class DQfD_Loss(nn.Module):
 
 # Defining epsilon greedy action selection
 def select_action(state, EPS, policy_net):
+    state = state.to(device)
     sample = random.random()
     if sample > EPS:
         # print("Exploiting")
@@ -185,6 +191,7 @@ def optimize_model(optimizer, policy_net, target_net, replay_memory, demo_replay
     if sample > BETA:
         # print("Sampling from demo replay memory")
         batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones = sample_demo_batch(demo_replay_memory, BATCH_SIZE, grayscale=True)
+        batch_states, batch_next_states, batch_rewards = batch_states.to(device), batch_next_states.to(device), batch_rewards.to(device)
         loss = dqfd_loss(policy_net, target_net, batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones, GAMMA, large_margin=True)
         # print(f"Loss: {loss}")
 
@@ -218,7 +225,7 @@ def optimize_model(optimizer, policy_net, target_net, replay_memory, demo_replay
         # print(batch_actions.shape)
         # print(batch_rewards.shape)
         # print(batch_dones.shape)
-
+        batch_states, batch_next_states, batch_rewards = batch_states.to(device), batch_next_states.to(device), batch_rewards.to(device)
         loss = dqfd_loss(policy_net, target_net, batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones, GAMMA, large_margin=False)
         # print(f"Loss: {loss}")
 

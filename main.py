@@ -23,20 +23,20 @@ device = "cpu"
 
 
 # Defining model hyper-parameters
-# BATCH_SIZE is the number of transitions sampled from the replay buffer
-# GAMMA is the discount factor as mentioned in the previous section
+# BATCH_SIZE is the number of transitions sampled from the replay memory. A batch of inputs is sampled and fed through the optimizer when training the policy network
+# GAMMA is the discount factor
 # EPS is the epsilon greedy exploration probability
 # TAU is the update rate of the target network
-# LR is the learning rate of the AdamW optimizer
-FRAME_STACK = 2
-BATCH_SIZE = 2
+# LR is the learning rate of the optimizer
+FRAME_STACK = 4
+BATCH_SIZE = 64
 GAMMA = 0.99
 EPS = 0.01
 TAU = 0.005
 LR = 1e-4
 num_episodes = 2
 num_steps = 10
-RUN_NAME = "Test_Run_1"
+RUN_NAME = "Test_Run_2"
 logdir = f"runs/frame_stack:{FRAME_STACK}_|batch_size:{BATCH_SIZE}_|gamma:{GAMMA}_|eps:{EPS}_|tau:{TAU}_|lr:{LR}_|episodes:{num_episodes}_|steps:{num_steps}_|run:{RUN_NAME}"
 
 # Setting up the tensorboard summary writer
@@ -53,6 +53,7 @@ data = minerl.data.make('MineRLTreechop-v0')
 iterator = BufferedBatchIter(data)
 demo_replay_memory = iterator.buffered_batch_iter(batch_size=FRAME_STACK, num_epochs=1) # The batch_size here refers to the number of consequtive frames
 replay_memory = model.ReplayMemory(1000)
+print("Replay memory & Demo replay memory initialized")
 
 n_observation_feats =  FRAME_STACK * 64 * 64 #  64 * 64 * 3 * FRAME_STACK 
 n_actions = 15
@@ -80,7 +81,7 @@ elif architecture == "duelling_net":
 
 
 # Defining the loss function and optimizer
-optimizer = optim.Adam(policy_net.parameters(), lr=LR, weight_decay=0.0001) # Weight decay is L2 regularization
+optimizer = optim.Adam(policy_net.parameters(), lr=LR, weight_decay=1e-5) # Weight decay is L2 regularization
 dqfd_loss = model.DQfD_Loss()
 
 
@@ -100,18 +101,17 @@ for i_episode in range(num_episodes):
 
     # Initialize the environment and get it's state
     obs = env.reset()
-    print("Reset Successful")
+    # print("Reset Successful")
     obs_gray = cv2.cvtColor(obs['pov'], cv2.COLOR_BGR2GRAY)
-    # state = torch.tensor(stack_observations(obs_gray, FRAME_STACK), dtype=torch.float32) # Stacking observations together to form a state
+    # Stacking observations together to form a state
     state = stack_observations(obs_gray, FRAME_STACK)
-    print(f"First state shape: {state.shape}")
+    # print(f"First state shape: {state.shape}")
     
     # Metrics
     episode_return = 0
     episode_steps = 0
 
     for t in range(num_steps):
-        # action = model.select_action(torch.reshape(state, (1,-1)), EPS, policy_net)
         if architecture == "simple":
             action = model.select_action(torch.reshape(torch.tensor(state, dtype=torch.float32), (1,-1)), EPS, policy_net)
         elif architecture == "duelling_net":
@@ -123,7 +123,7 @@ for i_episode in range(num_episodes):
             # writer.add_graph(policy_net, temp.view(tuple(shape)))
             # writer.close()
         
-        print(f"action: {action}")
+        # print(f"action: {action}")
         next_state = np.zeros(state.shape)
         reward = 0
         done = False
@@ -134,14 +134,12 @@ for i_episode in range(num_episodes):
                 next_state[i] = next_obs_gray
                 reward += next_reward
 
-        print(f"Completed {FRAME_STACK} transitions")
+        # print(f"Completed {FRAME_STACK} transitions")
 
-        # Store the transition in memory
+        # Store the transition in the agent's self-sampled memory
         if not done:
-            # next_state = torch.tensor(next_state, dtype=torch.float32, requires_grad=True)
             replay_memory.append(state, action, reward, next_state)
         else:
-            # next_state = torch.tensor(pad_state(next_state, FRAME_STACK), dtype=torch.float32, requires_grad=True)
             next_state = pad_state(next_state, FRAME_STACK)
             replay_memory.append(state, action, reward, next_state)
 
@@ -156,11 +154,13 @@ for i_episode in range(num_episodes):
 
         # Perform one step of the optimization (on the policy network)
         loss = model.optimize_model(optimizer, policy_net, target_net, replay_memory, demo_replay_memory, dqfd_loss, BATCH_SIZE=BATCH_SIZE, BETA = BETA, GAMMA=GAMMA)
-        print("Completed one step of optimization")
+        # print("Completed one step of optimization")
         
-        # Logging step scale metrics
+        # Logging step level metrics
         episode_return += reward
+        episode_steps = t
         writer.add_scalar("Loss vs Total Steps (all episodes)", loss, total_steps)
+        total_steps += 1
 
         # Soft update of the target network's weights
         # θ′ ← τ θ + (1 −τ )θ′
@@ -169,17 +169,15 @@ for i_episode in range(num_episodes):
         for key in policy_net_state_dict:
             target_net_state_dict[key] = policy_net_state_dict[key]*TAU + target_net_state_dict[key]*(1-TAU)
         target_net.load_state_dict(target_net_state_dict)
-        print("Completed one step of soft update")
+        # print("Completed one step of soft update")
 
         if done:
             break
+        # print("--------------")
 
-        total_steps += 1
-        episode_steps = t
-        print("--------------")
-
-    # Logging episode scale metrics
+    # Logging episode level metrics
     writer.add_scalar("Num Steps vs Episode", episode_steps, i_episode)
     writer.add_scalar("Total Episode Return vs Episode", episode_return, i_episode)
 
 writer.close()
+print('Complete')

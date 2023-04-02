@@ -159,11 +159,11 @@ class DQfD_Loss(nn.Module):
 def select_action(state, EPS, policy_net):
     sample = random.random()
     if sample > EPS:
-        print("Exploiting")
+        # print("Exploiting")
         with torch.no_grad():
-            return torch.argmax(policy_net(state, for_optimization=False), dim=1).item() #policy_net(state).max(1)[1].view(1, 1)
+            return torch.argmax(policy_net(state, for_optimization=False), dim=1).item()
     else:
-        print("Exploring")
+        # print("Exploring")
         return action_names[random.choice(list(action_names.keys()))]
         # return action_list[action_names[random.choice(list(action_names.keys()))]]
 
@@ -179,15 +179,14 @@ def optimize_model(optimizer, policy_net, target_net, replay_memory, demo_replay
 
     sample = random.random()
     if sample > BETA:
-        print("Sampling from demo replay memory")
+        # print("Sampling from demo replay memory")
         batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones = sample_demo_batch(demo_replay_memory, BATCH_SIZE, grayscale=True)
         loss = dqfd_loss(policy_net, target_net, batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones, GAMMA, large_margin=True)
-        print(f"Loss: {loss}")
+        # print(f"Loss: {loss}")
 
 
     else:
-        print("Sampling from agent's replay memory")
-        # code to be added
+        # print("Sampling from agent's replay memory")
         batch_transitions = replay_memory.sample(BATCH_SIZE)
 
         batch_states = []
@@ -217,7 +216,7 @@ def optimize_model(optimizer, policy_net, target_net, replay_memory, demo_replay
         # print(batch_dones.shape)
 
         loss = dqfd_loss(policy_net, target_net, batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones, GAMMA, large_margin=False)
-        print(f"Loss: {loss}")
+        # print(f"Loss: {loss}")
 
     # Optimize the model
     optimizer.zero_grad()

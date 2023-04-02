@@ -160,7 +160,7 @@ for i_episode in range(num_episodes):
         
         # Logging step scale metrics
         episode_return += reward
-        writer.add_scalar("Loss", loss, total_steps)
+        writer.add_scalar("Loss vs Total Steps (all episodes)", loss, total_steps)
 
         # Soft update of the target network's weights
         # θ′ ← τ θ + (1 −τ )θ′
@@ -179,6 +179,7 @@ for i_episode in range(num_episodes):
         print("--------------")
 
     # Logging episode scale metrics
-    writer.add_scalar("Num Steps in Episode", episode_steps, i_episode)
-    writer.add_scalar("Total Episode Return", episode_return, i_episode)
+    writer.add_scalar("Num Steps vs Episode", episode_steps, i_episode)
+    writer.add_scalar("Total Episode Return vs Episode", episode_return, i_episode)
 
+writer.close()

@@ -12,6 +12,8 @@ from utils import stack_observations, pad_state
 from actions import actions as action_list
 # from demo_sampling import sample_demo_batch
 
+from torch.utils.tensorboard import SummaryWriter
+
 
 
 # Setting up a device
@@ -32,7 +34,13 @@ GAMMA = 0.99
 EPS = 0.01
 TAU = 0.005
 LR = 1e-4
+num_episodes = 2
+num_steps = 10
+RUN_NAME = "Test_Run_1"
+logdir = f"runs/frame_stack:{FRAME_STACK}_|batch_size:{BATCH_SIZE}_|gamma:{GAMMA}_|eps:{EPS}_|tau:{TAU}_|lr:{LR}_|episodes:{num_episodes}_|steps:{num_steps}_|run:{RUN_NAME}"
 
+# Setting up the tensorboard summary writer
+writer = SummaryWriter(logdir=logdir)
 
 
 # Creating the environment (this may take a few minutes) and setting up the data sampling iterator
@@ -77,10 +85,17 @@ dqfd_loss = model.DQfD_Loss()
 
 
 
-# Main function
-num_episodes = 1
-num_steps = 10
 
+
+# Metrics
+'''
+- Loss vs num steps
+- Episode return vs episode number
+- num steps in episode vs episodes 
+'''
+total_steps = 0
+
+# Main function
 for i_episode in range(num_episodes):
 
     # Initialize the environment and get it's state
@@ -90,6 +105,10 @@ for i_episode in range(num_episodes):
     # state = torch.tensor(stack_observations(obs_gray, FRAME_STACK), dtype=torch.float32) # Stacking observations together to form a state
     state = stack_observations(obs_gray, FRAME_STACK)
     print(f"First state shape: {state.shape}")
+    
+    # Metrics
+    episode_return = 0
+    episode_steps = 0
 
     for t in range(num_steps):
         # action = model.select_action(torch.reshape(state, (1,-1)), EPS, policy_net)
@@ -100,6 +119,9 @@ for i_episode in range(num_episodes):
             shape = list(temp.shape)
             shape.insert(0,1)
             action = model.select_action(temp.view(tuple(shape)), EPS, policy_net)
+            # # Adding the model's graph in tensorboard
+            # writer.add_graph(policy_net, temp.view(tuple(shape)))
+            # writer.close()
         
         print(f"action: {action}")
         next_state = np.zeros(state.shape)
@@ -133,8 +155,12 @@ for i_episode in range(num_episodes):
             BETA = 0.5
 
         # Perform one step of the optimization (on the policy network)
-        model.optimize_model(optimizer, policy_net, target_net, replay_memory, demo_replay_memory, dqfd_loss, BATCH_SIZE=BATCH_SIZE, BETA = BETA, GAMMA=GAMMA)
+        loss = model.optimize_model(optimizer, policy_net, target_net, replay_memory, demo_replay_memory, dqfd_loss, BATCH_SIZE=BATCH_SIZE, BETA = BETA, GAMMA=GAMMA)
         print("Completed one step of optimization")
+        
+        # Logging step scale metrics
+        episode_return += reward
+        writer.add_scalar("Loss", loss, total_steps)
 
         # Soft update of the target network's weights
         # θ′ ← τ θ + (1 −τ )θ′
@@ -146,8 +172,13 @@ for i_episode in range(num_episodes):
         print("Completed one step of soft update")
 
         if done:
-            # episode_durations.append(t + 1)
             break
 
+        total_steps += 1
+        episode_steps = t
         print("--------------")
+
+    # Logging episode scale metrics
+    writer.add_scalar("Num Steps in Episode", episode_steps, i_episode)
+    writer.add_scalar("Total Episode Return", episode_return, i_episode)
 

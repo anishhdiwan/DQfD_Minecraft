@@ -150,7 +150,7 @@ for i_episode in range(num_episodes):
 
         # Sampling from the demo replay until the replay memory has at least BATCH_SIZE number of transitions
         # if len(replay_memory) < BATCH_SIZE:
-        if total_steps < pre_train_steps:
+        if (total_steps < pre_train_steps) or (len(replay_memory) < BATCH_SIZE):
             BETA = 0
         else:
             BETA = (total_steps - pre_train_steps)/(num_steps - pre_train_steps)

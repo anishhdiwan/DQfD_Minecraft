@@ -35,8 +35,9 @@ GAMMA = 0.99
 EPS = 0.01
 TAU = 0.005
 LR = 1e-4
-num_episodes = 2
-num_steps = 10
+num_episodes = 10
+num_steps = 1000
+pre_train_steps = 500
 RUN_NAME = "Test_Run_2"
 logdir = f"runs/frame_stack:{FRAME_STACK}_|batch_size:{BATCH_SIZE}_|gamma:{GAMMA}_|eps:{EPS}_|tau:{TAU}_|lr:{LR}_|episodes:{num_episodes}_|steps:{num_steps}_|run:{RUN_NAME}"
 
@@ -148,10 +149,12 @@ for i_episode in range(num_episodes):
         state = next_state
 
         # Sampling from the demo replay until the replay memory has at least BATCH_SIZE number of transitions
-        if len(replay_memory) < BATCH_SIZE:
+        # if len(replay_memory) < BATCH_SIZE:
+        if total_steps < pre_train_steps:
             BETA = 0
         else:
-            BETA = 0.5
+            BETA = (total_steps - pre_train_steps)/(num_steps - pre_train_steps)
+            # BETA = 0.5
 
         # Perform one step of the optimization (on the policy network)
         loss = model.optimize_model(optimizer, policy_net, target_net, replay_memory, demo_replay_memory, dqfd_loss, BATCH_SIZE=BATCH_SIZE, BETA = BETA, GAMMA=GAMMA)

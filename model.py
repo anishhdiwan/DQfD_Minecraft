@@ -137,14 +137,18 @@ class DQfD_Loss(nn.Module):
 
     def forward(self, policy_net, target_net, states, actions, rewards, next_states, dones, GAMMA, large_margin=True):
         # 1-step TD loss
-        targets = rewards + GAMMA * torch.max(target_net(next_states), dim=1).values
+        with torch.no_grad():
+            next_state_max = torch.max(target_net(next_states), dim=1).values
+
+        targets = rewards + GAMMA * next_state_max # torch.max(target_net(next_states), dim=1).values
         values = policy_net(states).gather(1,actions.view(-1,1)).view(-1,)
 
         if large_margin == True:
             # large margin loss
             lm1 = torch.max(policy_net(states), dim=1).values # Q value of the agent's actions as per its current policy
             lm2 = torch.eq(torch.argmax(policy_net(states), dim=1), actions).float() # Margin function: 0 if agent's action is the same as the expert's action 1 otherwise
-            lm3 = target_net(states).gather(1, actions.view(-1,1)).view(-1,) # Q value of the expert's action as per the target net (similar to why we use a frozen target)
+            with torch.no_grad():
+                lm3 = target_net(states).gather(1, actions.view(-1,1)).view(-1,) # Q value of the expert's action as per the target net (similar to why we use a frozen target)
 
             large_margin_loss = torch.mean(lm1+lm2+lm3)        
 

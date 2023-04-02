@@ -1,0 +1,2 @@
+2023-04-01 15:37:43 LAPTOP-HLK0F60I process_watcher[4816] INFO Process watcher started between parent 4725 and child 4759 
+2023-04-01 15:38:21 LAPTOP-HLK0F60I process_watcher[4816] INFO Child is not running anymore, launcher can terminate.

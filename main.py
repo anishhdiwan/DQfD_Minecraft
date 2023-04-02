@@ -2,6 +2,7 @@ import torch
 import torch.optim as optim
 import cv2
 import numpy as np
+from tqdm import tqdm
 
 import gym
 import minerl
@@ -98,7 +99,6 @@ total_steps = 0
 
 # Main function
 for i_episode in range(num_episodes):
-
     # Initialize the environment and get it's state
     obs = env.reset()
     # print("Reset Successful")
@@ -110,8 +110,9 @@ for i_episode in range(num_episodes):
     # Metrics
     episode_return = 0
     episode_steps = 0
-
-    for t in range(num_steps):
+    loop = tqdm(range(num_steps))
+    for t in loop:
+        loop.set_description(f"Episode {i_episode} Steps")
         if architecture == "simple":
             action = model.select_action(torch.reshape(torch.tensor(state, dtype=torch.float32), (1,-1)), EPS, policy_net)
         elif architecture == "duelling_net":

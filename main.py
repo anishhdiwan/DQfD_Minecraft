@@ -40,7 +40,7 @@ RUN_NAME = "Test_Run_1"
 logdir = f"runs/frame_stack:{FRAME_STACK}_|batch_size:{BATCH_SIZE}_|gamma:{GAMMA}_|eps:{EPS}_|tau:{TAU}_|lr:{LR}_|episodes:{num_episodes}_|steps:{num_steps}_|run:{RUN_NAME}"
 
 # Setting up the tensorboard summary writer
-writer = SummaryWriter(logdir=logdir)
+writer = SummaryWriter(log_dir=logdir)
 
 
 # Creating the environment (this may take a few minutes) and setting up the data sampling iterator

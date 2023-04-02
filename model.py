@@ -218,8 +218,6 @@ def optimize_model(optimizer, policy_net, target_net, replay_memory, demo_replay
 
         loss = dqfd_loss(policy_net, target_net, batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones, GAMMA, large_margin=False)
         print(f"Loss: {loss}")
-        return loss
-
 
     # Optimize the model
     optimizer.zero_grad()
@@ -228,4 +226,5 @@ def optimize_model(optimizer, policy_net, target_net, replay_memory, demo_replay
     torch.nn.utils.clip_grad_value_(policy_net.parameters(), 100)
     optimizer.step()
     # print("Optimizer steped ahead")
+    return loss
 

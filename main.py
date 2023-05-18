@@ -35,10 +35,10 @@ GAMMA = 0.99
 EPS = 0.01
 TAU = 0.005
 LR = 1e-4
-num_episodes = 2
-num_steps = 10
-pre_train_steps = 5
-RUN_NAME = "Test_Run_2"
+num_episodes = 10
+num_steps = 1500
+pre_train_steps = int(5*1500)
+RUN_NAME = "Test_Run_3"
 logdir = f"runs/frame_stack:{FRAME_STACK}_|batch_size:{BATCH_SIZE}_|gamma:{GAMMA}_|eps:{EPS}_|tau:{TAU}_|lr:{LR}_|episodes:{num_episodes}_|steps:{num_steps}_|run:{RUN_NAME}"
 
 # Setting up the tensorboard summary writer
@@ -48,6 +48,8 @@ writer = SummaryWriter(log_dir=logdir)
 # Creating the environment (this may take a few minutes) and setting up the data sampling iterator
 env = gym.make('MineRLTreechop-v0')
 print("Gym.make done")
+import logging
+logging.basicConfig(level=logging.DEBUG)
 
 # Initializing the generator
 # Download the dataset before running this script
@@ -174,7 +176,7 @@ for i_episode in range(num_episodes):
             target_net_state_dict[key] = policy_net_state_dict[key]*TAU + target_net_state_dict[key]*(1-TAU)
         target_net.load_state_dict(target_net_state_dict)
         # print("Completed one step of soft update")
-
+        env.render()
         if done:
             break
         # print("--------------")

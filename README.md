@@ -3,10 +3,8 @@ This repo contains code and documentation to train a DQfD agent to solve the Tre
 
 The methods and full replication details can be found at [Deep RL agents that learn behavior from human demonstrations](https://www.anishdiwan.com/post/deep-rl-in-minecraft)
 
-The model can be run by executing main.py.
-The test_minerl directory contains test scripts that are not up to date with the lastest changes in the main directory. 
+The model can be run by executing main.py. The test_minerl directory contains test scripts that can be used to test individual functionalities from the main scripts. 
 
-TO DO
-- Speed improvements
-- Verify loss definition and optimization computational graph
-- Plotting utils
+## How to reproduce this work?
+Please refer to the appendix in the blog post for instructions on reproducing this work. The blog post goes into detail on several aspects of the project such as installation, demonstration sampling, algorithmic details, and hyperparameters. 
+

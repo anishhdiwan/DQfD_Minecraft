@@ -107,7 +107,7 @@ total_steps = 0
 for i_episode in range(num_episodes):
     # Initialize the environment and get it's state
     obs = env.reset()
-    # print("Reset Successful")
+    print("Reset Successful")
     obs_gray = cv2.cvtColor(obs['pov'], cv2.COLOR_BGR2GRAY)
     # Stacking observations together to form a state
     state = stack_observations(obs_gray, FRAME_STACK)
@@ -181,8 +181,8 @@ for i_episode in range(num_episodes):
         # print("Completed one step of soft update")
         
         # Rendering the frames and saving the model every few steps
-        env.render()
-        if (total_steps % 100) == 0:
+        # env.render()
+        if (total_steps % 1000) == 0:
             torch.save(policy_net.state_dict(), save_path)
 
         if done:

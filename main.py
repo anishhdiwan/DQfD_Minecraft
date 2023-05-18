@@ -182,7 +182,7 @@ for i_episode in range(num_episodes):
         
         # Rendering the frames and saving the model every few steps
         env.render()
-        if (total_steps % 1000) == 0:
+        if (total_steps % 100) == 0:
             torch.save(policy_net.state_dict(), save_path)
 
         if done:

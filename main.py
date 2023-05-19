@@ -162,7 +162,7 @@ for i_episode in range(num_episodes):
             # BETA = 0.5
 
         # Perform one step of the optimization (on the policy network)
-        loss = model.optimize_model(optimizer, policy_net, target_net, replay_memory, demo_replay_memory, dqfd_loss, BATCH_SIZE=BATCH_SIZE, BETA = BETA, GAMMA=GAMMA)
+        loss = model.optimize_model(optimizer, policy_net, target_net, replay_memory, demo_replay_memory, dqfd_loss, BATCH_SIZE=BATCH_SIZE, BETA = BETA, GAMMA=GAMMA)       
         # print("Completed one step of optimization")
         
         # Logging step level metrics

@@ -136,17 +136,29 @@ def map_aggregate_action(aggregate_action):
 	return action
 
 
-def sample_demo_batch(demo_replay_memory, batch_size, grayscale=False):
+def sample_demo_batch(demo_replay_memory, batch_size, grayscale=True):
 	'''
 	Returns batch_size number of transitions containing frame_stack in-game transitions. One transition here has 
 	frame_stack number of in-game frames (because of frame-skipping and concatenation of observation images)
 	'''
-	# Setting up empty lists to store batch_size number of transitions
-	batch_states = []
-	batch_actions = []
-	batch_rewards = []
-	batch_next_states = []
-	batch_dones = []
+	# Setting up empty lists and zero arrays to store batch_size number of transitions
+	# batch_states = []
+	# batch_next_states = []
+
+	if grayscale == True:
+		batch_states = np.zeros((batch_size, 2, 64, 64))
+		batch_next_states = np.zeros((batch_size, 2, 64, 64))
+	else:
+		batch_states = np.zeros((batch_size, 2, 64, 64, 3))
+		batch_next_states = np.zeros((batch_size, 2, 64, 64, 3))
+
+	# batch_actions = []
+	# batch_rewards = []
+	# batch_dones = []
+
+	batch_actions = np.zeros((batch_size))
+	batch_rewards = np.zeros((batch_size))
+	batch_dones = np.zeros((batch_size))
 
 	for i in range(batch_size):
 		current_states, actions, rewards, next_states, dones = next(demo_replay_memory)
@@ -155,39 +167,55 @@ def sample_demo_batch(demo_replay_memory, batch_size, grayscale=False):
 		if grayscale==True:
 			current_states_gray = np.zeros((current_states['pov'].shape[:-1]))
 			next_states_gray = np.zeros((next_states['pov'].shape[:-1]))
-			for i in range(current_states['pov'].shape[0]):
+			for j in range(current_states['pov'].shape[0]):
 				# current_states_gray = np.zeros((current_states['pov'].shape[:-1]))
 				# next_states_gray = np.zeros((next_states['pov'].shape[:-1]))
-				current_states_gray[i] = cv2.cvtColor(current_states['pov'][i], cv2.COLOR_BGR2GRAY)
-				next_states_gray[i] = cv2.cvtColor(next_states['pov'][i], cv2.COLOR_BGR2GRAY)
+				current_states_gray[j] = cv2.cvtColor(current_states['pov'][j], cv2.COLOR_BGR2GRAY)
+				next_states_gray[j] = cv2.cvtColor(next_states['pov'][j], cv2.COLOR_BGR2GRAY)
 
-			batch_states.append(current_states_gray)
-			batch_next_states.append(next_states_gray)
+			# batch_states.append(current_states_gray)
+			# batch_next_states.append(next_states_gray)
+			batch_states[i] = current_states_gray
+			batch_next_states[i] = next_states_gray
+
 
 		else:
-			batch_states.append(current_states['pov'])
-			batch_next_states.append(next_states['pov'])
+			# batch_states.append(current_states['pov'])
+			# batch_next_states.append(next_states['pov'])
+			batch_states[i] = current_states['pov']
+			batch_next_states[i] = next_states['pov']
 
-		batch_rewards.append(np.sum(rewards))
+		# batch_rewards.append(np.sum(rewards))
+		batch_rewards[i] = np.sum(rewards)
+
 		aggregate_action = get_aggregate_action(actions)
 		agent_action = map_aggregate_action(aggregate_action)
 		action_idx = action_names[agent_action]
-		batch_actions.append(action_idx)
+		# batch_actions.append(action_idx)
+		batch_actions[i] = action_idx
 
 		if np.sum(dones) > 0:
-			batch_dones.append(1)
+			# batch_dones.append(1)
+			batch_dones[i] = 1
 		else:
-			batch_dones.append(0)
+			# batch_dones.append(0)
+			batch_dones[i] = 0
 
 
 	# batch_states = torch.reshape(torch.tensor(np.array(batch_states), dtype=torch.float32, requires_grad=True), (batch_size,-1))
 	# batch_next_states = torch.reshape(torch.tensor(np.array(batch_next_states), dtype=torch.float32, requires_grad=True), (batch_size,-1))
 
-	batch_states = torch.tensor(np.array(batch_states), dtype=torch.float32, requires_grad=True)
-	batch_next_states = torch.tensor(np.array(batch_next_states), dtype=torch.float32, requires_grad=True)
-	batch_actions = torch.tensor(np.array(batch_actions))
-	batch_rewards = torch.tensor(np.array(batch_rewards), dtype=torch.float32, requires_grad=True)
-	batch_dones = torch.tensor(np.array(batch_dones))
+	# batch_states = torch.tensor(np.array(batch_states), dtype=torch.float32, requires_grad=True)
+	# batch_next_states = torch.tensor(np.array(batch_next_states), dtype=torch.float32, requires_grad=True)
+	# batch_actions = torch.tensor(np.array(batch_actions))
+	# batch_rewards = torch.tensor(np.array(batch_rewards), dtype=torch.float32, requires_grad=True)
+	# batch_dones = torch.tensor(np.array(batch_dones))
+
+	batch_states = torch.tensor(batch_states, dtype=torch.float32, requires_grad=True)
+	batch_next_states = torch.tensor(batch_next_states, dtype=torch.float32, requires_grad=True)
+	batch_actions = torch.tensor(batch_actions)
+	batch_rewards = torch.tensor(batch_rewards, dtype=torch.float32, requires_grad=True)
+	batch_dones = torch.tensor(batch_dones)
 
 	return batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones
 

@@ -3,7 +3,7 @@ import torch.optim as optim
 import cv2
 import numpy as np
 from tqdm import tqdm
-
+import psutil
 import gym
 import minerl
 from minerl.data import BufferedBatchIter
@@ -30,14 +30,14 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # TAU is the update rate of the target network
 # LR is the learning rate of the optimizer
 FRAME_STACK = 4
-BATCH_SIZE = 64
+BATCH_SIZE = 8
 GAMMA = 0.99
 EPS = 0.01
 TAU = 0.005
 LR = 1e-4
 num_episodes = 10
-num_steps = 1500
-pre_train_steps = int(5*1500)
+num_steps = 200
+pre_train_steps = int(5*num_steps)
 RUN_NAME = "Test_Run_3"
 logdir = f"runs/frame_stack:{FRAME_STACK}_|batch_size:{BATCH_SIZE}_|gamma:{GAMMA}_|eps:{EPS}_|tau:{TAU}_|lr:{LR}_|episodes:{num_episodes}_|steps:{num_steps}_|run:{RUN_NAME}"
 save_path = f"saved_models/frame_stack:{FRAME_STACK}_|batch_size:{BATCH_SIZE}_|gamma:{GAMMA}_|eps:{EPS}_|tau:{TAU}_|lr:{LR}_|episodes:{num_episodes}_|steps:{num_steps}_|run:{RUN_NAME}.pt"
@@ -118,7 +118,7 @@ for i_episode in range(num_episodes):
     episode_steps = 0
     loop = tqdm(range(num_steps))
     for t in loop:
-        loop.set_description(f"Episode {i_episode} Steps")
+        loop.set_description(f"Episode {i_episode} Steps | CPU {psutil.cpu_percent()} | RAM {psutil.virtual_memory().percent}")
         if architecture == "simple":
             action = model.select_action(torch.reshape(torch.tensor(state, dtype=torch.float32), (1,-1)), EPS, policy_net)
         elif architecture == "duelling_net":
@@ -182,7 +182,7 @@ for i_episode in range(num_episodes):
         
         # Rendering the frames and saving the model every few steps
         # env.render()
-        if (total_steps % 1000) == 0:
+        if (total_steps % num_steps) == 0:
             torch.save(policy_net.state_dict(), save_path)
 
         if done:

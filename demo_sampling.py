@@ -150,12 +150,16 @@ def sample_demo_batch(demo_replay_memory, batch_size, grayscale=False):
 
 	for i in range(batch_size):
 		current_states, actions, rewards, next_states, dones = next(demo_replay_memory)
+		print(current_states['pov'].shape)
+		print(current_states['pov'].shape[:-1])
 
 		# Grayscale
 		if grayscale==True:
+			current_states_gray = np.zeros((current_states['pov'].shape[:-1]))
+			next_states_gray = np.zeros((next_states['pov'].shape[:-1]))
 			for i in range(current_states['pov'].shape[0]):
-				current_states_gray = np.zeros((current_states['pov'].shape[:-1]))
-				next_states_gray = np.zeros((next_states['pov'].shape[:-1]))
+				# current_states_gray = np.zeros((current_states['pov'].shape[:-1]))
+				# next_states_gray = np.zeros((next_states['pov'].shape[:-1]))
 				current_states_gray[i] = cv2.cvtColor(current_states['pov'][i], cv2.COLOR_BGR2GRAY)
 				next_states_gray[i] = cv2.cvtColor(next_states['pov'][i], cv2.COLOR_BGR2GRAY)
 

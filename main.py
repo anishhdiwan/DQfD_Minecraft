@@ -35,9 +35,10 @@ GAMMA = 0.99
 EPS = 0.01
 TAU = 0.005
 LR = 1e-4
-num_episodes = 10
-num_steps = 200
-pre_train_steps = int(5*num_steps)
+num_episodes = 5
+num_steps = 1500
+save_checkpoint = 500 # save the model after these many steps
+pre_train_steps = int(2*num_steps)
 RUN_NAME = "Test_Run_3"
 logdir = f"runs/frame_stack:{FRAME_STACK}_|batch_size:{BATCH_SIZE}_|gamma:{GAMMA}_|eps:{EPS}_|tau:{TAU}_|lr:{LR}_|episodes:{num_episodes}_|steps:{num_steps}_|run:{RUN_NAME}"
 save_path = f"saved_models/frame_stack:{FRAME_STACK}_|batch_size:{BATCH_SIZE}_|gamma:{GAMMA}_|eps:{EPS}_|tau:{TAU}_|lr:{LR}_|episodes:{num_episodes}_|steps:{num_steps}_|run:{RUN_NAME}.pt"
@@ -57,9 +58,9 @@ print("Gym.make done")
 # Initializing the generator
 # Download the dataset before running this script
 data = minerl.data.make('MineRLTreechop-v0')
-iterator = BufferedBatchIter(data)
+iterator = BufferedBatchIter(data, buffer_target_size=5000)
 demo_replay_memory = iterator.buffered_batch_iter(batch_size=FRAME_STACK, num_epochs=1) # The batch_size here refers to the number of consequtive frames
-replay_memory = model.ReplayMemory(1000)
+replay_memory = model.ReplayMemory(5000)
 print("Replay memory & demo replay memory initialized")
 
 n_observation_feats =  FRAME_STACK * 64 * 64 #  64 * 64 * 3 * FRAME_STACK 
@@ -182,7 +183,7 @@ for i_episode in range(num_episodes):
         
         # Rendering the frames and saving the model every few steps
         # env.render()
-        if (total_steps % num_steps) == 0:
+        if (total_steps % save_checkpoint) == 0:
             torch.save(policy_net.state_dict(), save_path)
 
         if done:

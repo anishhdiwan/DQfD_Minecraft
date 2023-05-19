@@ -150,8 +150,6 @@ def sample_demo_batch(demo_replay_memory, batch_size, grayscale=False):
 
 	for i in range(batch_size):
 		current_states, actions, rewards, next_states, dones = next(demo_replay_memory)
-		print(current_states['pov'].shape)
-		print(current_states['pov'].shape[:-1])
 
 		# Grayscale
 		if grayscale==True:

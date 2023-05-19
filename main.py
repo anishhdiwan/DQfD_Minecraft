@@ -30,7 +30,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # TAU is the update rate of the target network
 # LR is the learning rate of the optimizer
 FRAME_STACK = 4
-BATCH_SIZE = 8
+BATCH_SIZE = 32
 GAMMA = 0.99
 EPS = 0.01
 TAU = 0.005
@@ -57,9 +57,20 @@ print("Gym.make done")
 
 # Initializing the generator
 # Download the dataset before running this script
-data = minerl.data.make('MineRLTreechop-v0')
-iterator = BufferedBatchIter(data, buffer_target_size=5000)
-demo_replay_memory = iterator.buffered_batch_iter(batch_size=FRAME_STACK, num_epochs=1) # The batch_size here refers to the number of consequtive frames
+def create_demo_iterator():
+    # Creating a function to create an iterator to handle the StopIteration error at the end of the buffer. 
+    data = minerl.data.make('MineRLTreechop-v0')
+    iterator = BufferedBatchIter(data, buffer_target_size=5000)
+    demo_replay_memory = iterator.buffered_batch_iter(batch_size=FRAME_STACK, num_epochs=1) # The batch_size here refers to the number of consequtive frames
+    return demo_replay_memory
+
+demo_replay_memory = create_demo_iterator()   
+
+
+# data = minerl.data.make('MineRLTreechop-v0')
+# iterator = BufferedBatchIter(data, buffer_target_size=5000)
+# demo_replay_memory = iterator.buffered_batch_iter(batch_size=FRAME_STACK, num_epochs=1) # The batch_size here refers to the number of consequtive frames
+
 replay_memory = model.ReplayMemory(5000)
 print("Replay memory & demo replay memory initialized")
 
@@ -67,6 +78,7 @@ n_observation_feats =  FRAME_STACK * 64 * 64 #  64 * 64 * 3 * FRAME_STACK
 n_actions = 15
 # print(f"num observation features: {n_observation_feats}")
 # print(f"num actions: {n_actions}")
+
 
 
 # Choosing a deep architecture:
@@ -163,8 +175,16 @@ for i_episode in range(num_episodes):
             # BETA = 0.5
 
         # Perform one step of the optimization (on the policy network)
-        loss = model.optimize_model(optimizer, policy_net, target_net, replay_memory, demo_replay_memory, dqfd_loss, BATCH_SIZE=BATCH_SIZE, BETA = BETA, GAMMA=GAMMA)       
+        try:
+            loss = model.optimize_model(optimizer, policy_net, target_net, replay_memory, demo_replay_memory, dqfd_loss, BATCH_SIZE=BATCH_SIZE, BETA = BETA, GAMMA=GAMMA)       
         # print("Completed one step of optimization")
+
+        except StopIteration as e:
+            print("StopIteration was called by the iterator. Creating a new one")
+            demo_replay_memory = create_demo_iterator()  
+            loss = model.optimize_model(optimizer, policy_net, target_net, replay_memory, demo_replay_memory, dqfd_loss, BATCH_SIZE=BATCH_SIZE, BETA = BETA, GAMMA=GAMMA)       
+
+
         
         # Logging step level metrics
         episode_return += reward
@@ -182,7 +202,7 @@ for i_episode in range(num_episodes):
         # print("Completed one step of soft update")
         
         # Rendering the frames and saving the model every few steps
-        # env.render()
+        env.render()
         if (total_steps % save_checkpoint) == 0:
             torch.save(policy_net.state_dict(), save_path)
 

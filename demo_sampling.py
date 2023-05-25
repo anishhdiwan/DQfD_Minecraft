@@ -160,8 +160,10 @@ def sample_demo_batch(demo_replay_memory, batch_size, grayscale=True):
 	# batch_rewards = np.zeros((batch_size))
 	# batch_dones = np.zeros((batch_size))
 
-	for i in range(batch_size):
-		current_states, actions, rewards, next_states, dones = next(demo_replay_memory)
+	for current_states, actions, rewards, next_states, dones in demo_replay_memory:
+
+	# for i in range(batch_size):
+	# 	current_states, actions, rewards, next_states, dones = next(demo_replay_memory)
 
 		# Grayscale
 		if grayscale==True:

@@ -57,19 +57,19 @@ print("Gym.make done")
 
 # Initializing the generator
 # Download the dataset before running this script
-def create_demo_iterator():
-    # Creating a function to create an iterator to handle the StopIteration error at the end of the buffer. 
-    data = minerl.data.make('MineRLTreechop-v0')
-    iterator = BufferedBatchIter(data, buffer_target_size=5000)
-    demo_replay_memory = iterator.buffered_batch_iter(batch_size=FRAME_STACK, num_epochs=1) # The batch_size here refers to the number of consequtive frames
-    return demo_replay_memory
+# def create_demo_iterator():
+#     # Creating a function to create an iterator to handle the StopIteration error at the end of the buffer. 
+#     data = minerl.data.make('MineRLTreechop-v0')
+#     iterator = BufferedBatchIter(data, buffer_target_size=5000)
+#     demo_replay_memory = iterator.buffered_batch_iter(batch_size=FRAME_STACK, num_epochs=1) # The batch_size here refers to the number of consequtive frames
+#     return demo_replay_memory
 
 demo_replay_memory = create_demo_iterator()   
 
 
-# data = minerl.data.make('MineRLTreechop-v0')
-# iterator = BufferedBatchIter(data, buffer_target_size=5000)
-# demo_replay_memory = iterator.buffered_batch_iter(batch_size=FRAME_STACK, num_epochs=1) # The batch_size here refers to the number of consequtive frames
+data = minerl.data.make('MineRLTreechop-v0')
+iterator = BufferedBatchIter(data, buffer_target_size=5000)
+demo_replay_memory = iterator.buffered_batch_iter(batch_size=FRAME_STACK, num_epochs=num_episodes) # The batch_size here refers to the number of consequtive frames
 
 replay_memory = model.ReplayMemory(5000)
 print("Replay memory & demo replay memory initialized")
@@ -175,14 +175,16 @@ for i_episode in range(num_episodes):
             # BETA = 0.5
 
         # Perform one step of the optimization (on the policy network)
-        try:
-            loss = model.optimize_model(optimizer, policy_net, target_net, replay_memory, demo_replay_memory, dqfd_loss, BATCH_SIZE=BATCH_SIZE, BETA = BETA, GAMMA=GAMMA)       
-        # print("Completed one step of optimization")
+        loss = model.optimize_model(optimizer, policy_net, target_net, replay_memory, demo_replay_memory, dqfd_loss, BATCH_SIZE=BATCH_SIZE, BETA = BETA, GAMMA=GAMMA)       
 
-        except StopIteration as e:
-            print("StopIteration was called by the iterator. Creating a new one")
-            demo_replay_memory = create_demo_iterator()  
-            loss = model.optimize_model(optimizer, policy_net, target_net, replay_memory, demo_replay_memory, dqfd_loss, BATCH_SIZE=BATCH_SIZE, BETA = BETA, GAMMA=GAMMA)       
+        # try:
+        #     loss = model.optimize_model(optimizer, policy_net, target_net, replay_memory, demo_replay_memory, dqfd_loss, BATCH_SIZE=BATCH_SIZE, BETA = BETA, GAMMA=GAMMA)       
+        # # print("Completed one step of optimization")
+
+        # except StopIteration as e:
+        #     print("StopIteration was called by the iterator. Creating a new one")
+        #     demo_replay_memory = create_demo_iterator()  
+        #     loss = model.optimize_model(optimizer, policy_net, target_net, replay_memory, demo_replay_memory, dqfd_loss, BATCH_SIZE=BATCH_SIZE, BETA = BETA, GAMMA=GAMMA)       
 
 
         

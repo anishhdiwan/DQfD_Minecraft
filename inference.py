@@ -18,10 +18,9 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # device = "cpu"
 
 # Defining model hyper-parameters
-# GAMMA is the discount factor
 # EPS is the epsilon greedy exploration probability
+num_episodes = 7 # Number of episodes of inference to run
 FRAME_STACK = 4
-GAMMA = 0.99
 EPS = 0.00 # Setting epsilon to zero implies that the agent always exploits the learnt policy
 num_steps = 250 # Number of steps to run through during inference
 n_actions = 15
@@ -44,41 +43,42 @@ env = gym.make('MineRLTreechop-v0')
 print("Gym.make done")
 
 
-# Initialize the environment and get it's state
-obs = env.reset()
-print("Reset Successful")
-obs_gray = cv2.cvtColor(obs['pov'], cv2.COLOR_BGR2GRAY)
-# Stacking observations together to form a state
-state = stack_observations(obs_gray, FRAME_STACK)
-# print(f"First state shape: {state.shape}")
+for i_episode in range(num_episodes):
+	# Initialize the environment and get it's state
+	obs = env.reset()
+	print("Reset Successful")
+	obs_gray = cv2.cvtColor(obs['pov'], cv2.COLOR_BGR2GRAY)
+	# Stacking observations together to form a state
+	state = stack_observations(obs_gray, FRAME_STACK)
+	# print(f"First state shape: {state.shape}")
 
 
-loop = tqdm(range(num_steps))
-for t in loop:
-    loop.set_description(f"Episode Steps | CPU {psutil.cpu_percent()} | RAM {psutil.virtual_memory().percent}")
+	loop = tqdm(range(num_steps))
+	for t in loop:
+	    loop.set_description(f"Episode {i_episode} Steps | CPU {psutil.cpu_percent()} | RAM {psutil.virtual_memory().percent}")
 
-    # Some shape transformations to align the state shape with the model's expected input shape
-    temp = torch.tensor(state, dtype=torch.float32)
-    shape = list(temp.shape)
-    shape.insert(0,1)
-    action = model.select_action(temp.view(tuple(shape)), EPS, policy_net)
+	    # Some shape transformations to align the state shape with the model's expected input shape
+	    temp = torch.tensor(state, dtype=torch.float32)
+	    shape = list(temp.shape)
+	    shape.insert(0,1)
+	    action = model.select_action(temp.view(tuple(shape)), EPS, policy_net)
 
-    next_state = np.zeros(state.shape)
-    reward = 0
-    done = False
-    for i in range(FRAME_STACK):
-        if not done:
-            next_observation, next_reward, done, _ = env.step(action_list[action])
-            next_obs_gray = cv2.cvtColor(next_observation['pov'], cv2.COLOR_BGR2GRAY)
-            next_state[i] = next_obs_gray
-            reward += next_reward
+	    next_state = np.zeros(state.shape)
+	    reward = 0
+	    done = False
+	    for i in range(FRAME_STACK):
+	        if not done:
+	            next_observation, next_reward, done, _ = env.step(action_list[action])
+	            next_obs_gray = cv2.cvtColor(next_observation['pov'], cv2.COLOR_BGR2GRAY)
+	            next_state[i] = next_obs_gray
+	            reward += next_reward
 
-    # Move to the next state
-    state = next_state
+	    # Move to the next state
+	    state = next_state
 
-    env.render()
+	    env.render()
 
-    if done:
-	    break
+	    if done:
+		    break
 
 print('Complete')

@@ -39,7 +39,7 @@ num_episodes = 5
 num_steps = 1500
 save_checkpoint = 500 # save the model after these many steps
 pre_train_steps = int(2*num_steps)
-RUN_NAME = "Test_Run_3"
+RUN_NAME = "Test_Run_4"
 logdir = f"runs/frame_stack:{FRAME_STACK}_|batch_size:{BATCH_SIZE}_|gamma:{GAMMA}_|eps:{EPS}_|tau:{TAU}_|lr:{LR}_|episodes:{num_episodes}_|steps:{num_steps}_|run:{RUN_NAME}"
 save_path = f"saved_models/frame_stack:{FRAME_STACK}_|batch_size:{BATCH_SIZE}_|gamma:{GAMMA}_|eps:{EPS}_|tau:{TAU}_|lr:{LR}_|episodes:{num_episodes}_|steps:{num_steps}_|run:{RUN_NAME}.pt"
 
@@ -64,7 +64,7 @@ print("Gym.make done")
 #     demo_replay_memory = iterator.buffered_batch_iter(batch_size=FRAME_STACK, num_epochs=1) # The batch_size here refers to the number of consequtive frames
 #     return demo_replay_memory
 
-demo_replay_memory = create_demo_iterator()   
+# demo_replay_memory = create_demo_iterator()   
 
 
 data = minerl.data.make('MineRLTreechop-v0')

@@ -60,10 +60,6 @@ def buffered_batch_iter_patch(self, batch_size):
         num_batches: Optional, how many batches to return
 
     """
-    assert num_batches is not None or num_epochs is not None, "One of num_epochs or " \
-                                                              "num_batches must be non-None"
-    assert num_batches is None or num_epochs is None, "You cannot specify both " \
-                                                      "num_batches and num_epochs"
 
     while True:
         # Remove any checks for batch_size or num_epochs as they do not make sense in the use case for this patch
@@ -72,12 +68,10 @@ def buffered_batch_iter_patch(self, batch_size):
         # (doing this before getting batch so it'll run on the first iteration)
         self.optionally_fill_buffer(batch_size=batch_size)
         ret_batch = self.get_batch(batch_size=batch_size) # 
-        batch_count += 1
         # if len(self.data_buffer) < batch_size:
         if len(self.available_trajectories) == 0:
             print("All available_trajectories are used up. Resetting and reshuffling available_trajectories")
 
-            epoch_count += 1
             self.available_trajectories = deepcopy(self.all_trajectories)
             random.shuffle(self.available_trajectories)
 

@@ -184,7 +184,7 @@ for i_episode in range(num_episodes):
         # print("Completed one step of soft update")
         
         # Rendering the frames and saving the model every few steps
-        # env.render()
+        env.render()
         if (total_steps % save_checkpoint) == 0:
             torch.save(policy_net.state_dict(), save_path)
 

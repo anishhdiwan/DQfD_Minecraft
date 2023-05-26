@@ -23,7 +23,7 @@ demo_replay_memory = iterator.buffered_batch_iter(batch_size=2) # The batch_size
 # Loop with next
 ################
 
-loop = tqdm(range(int(4000)))
+loop = tqdm(range(int(500)))
 for t in loop:
 	loop.set_description(f"Testing Prolonged Sampling. CPU {psutil.cpu_percent()} | RAM {psutil.virtual_memory().percent}")
 	batch_states, batch_actions, batch_rewards, batch_next_states, batch_dones = sample_demo_batch(demo_replay_memory, 64, grayscale=True)

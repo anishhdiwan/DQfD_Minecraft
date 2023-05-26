@@ -34,8 +34,8 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # LR is the learning rate of the optimizer
 FRAME_STACK = 4
 BATCH_SIZE = 32
-GAMMA = 0.95
-EPS = 0.1
+GAMMA = 0.99
+EPS = 0.05
 TAU = 0.005
 LR = 1e-4
 num_episodes = 8
@@ -61,7 +61,7 @@ print("Gym.make done")
 # Initializing the generator
 # Download the dataset before running this script
 data = minerl.data.make('MineRLTreechop-v0')
-iterator = BufferedBatchIter(data, buffer_target_size=5000)
+iterator = BufferedBatchIter(data)
 demo_replay_memory = iterator.buffered_batch_iter(batch_size=FRAME_STACK) # The batch_size here refers to the number of consequtive frames
 
 replay_memory = model.ReplayMemory(5000)

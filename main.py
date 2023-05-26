@@ -11,10 +11,13 @@ from minerl.data import BufferedBatchIter
 import model # Import the classes and functions defined in model.py
 from utils import stack_observations, pad_state
 from actions import actions as action_list
+from buffered_batch_iter_patches import optionally_fill_buffer_patch, buffered_batch_iter_patch
 # from demo_sampling import sample_demo_batch
 
-from torch.utils.tensorboard import SummaryWriter
+BufferedBatchIter.optionally_fill_buffer = optionally_fill_buffer_patch
+BufferedBatchIter.buffered_batch_iter = buffered_batch_iter_patch
 
+from torch.utils.tensorboard import SummaryWriter
 
 
 # Setting up a device
@@ -31,15 +34,15 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # LR is the learning rate of the optimizer
 FRAME_STACK = 4
 BATCH_SIZE = 32
-GAMMA = 0.99
-EPS = 0.01
+GAMMA = 0.95
+EPS = 0.1
 TAU = 0.005
 LR = 1e-4
-num_episodes = 5
+num_episodes = 8
 num_steps = 1500
 save_checkpoint = 500 # save the model after these many steps
-pre_train_steps = int(2*num_steps)
-RUN_NAME = "Test_Run_4"
+pre_train_steps = int(5*num_steps)
+RUN_NAME = "HP_combo_1"
 logdir = f"runs/frame_stack:{FRAME_STACK}_|batch_size:{BATCH_SIZE}_|gamma:{GAMMA}_|eps:{EPS}_|tau:{TAU}_|lr:{LR}_|episodes:{num_episodes}_|steps:{num_steps}_|run:{RUN_NAME}"
 save_path = f"saved_models/frame_stack:{FRAME_STACK}_|batch_size:{BATCH_SIZE}_|gamma:{GAMMA}_|eps:{EPS}_|tau:{TAU}_|lr:{LR}_|episodes:{num_episodes}_|steps:{num_steps}_|run:{RUN_NAME}.pt"
 
@@ -204,7 +207,7 @@ for i_episode in range(num_episodes):
         # print("Completed one step of soft update")
         
         # Rendering the frames and saving the model every few steps
-        env.render()
+        # env.render()
         if (total_steps % save_checkpoint) == 0:
             torch.save(policy_net.state_dict(), save_path)
 

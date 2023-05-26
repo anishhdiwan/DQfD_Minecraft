@@ -38,10 +38,10 @@ GAMMA = 0.99
 EPS = 0.05
 TAU = 0.005
 LR = 1e-4
-num_episodes = 8
+num_episodes = 20
 num_steps = 1500
 save_checkpoint = 500 # save the model after these many steps
-pre_train_steps = int(5*num_steps)
+pre_train_steps = int(10*num_steps)
 RUN_NAME = "HP_combo_1"
 logdir = f"runs/frame_stack:{FRAME_STACK}_|batch_size:{BATCH_SIZE}_|gamma:{GAMMA}_|eps:{EPS}_|tau:{TAU}_|lr:{LR}_|episodes:{num_episodes}_|steps:{num_steps}_|run:{RUN_NAME}"
 save_path = f"saved_models/frame_stack:{FRAME_STACK}_|batch_size:{BATCH_SIZE}_|gamma:{GAMMA}_|eps:{EPS}_|tau:{TAU}_|lr:{LR}_|episodes:{num_episodes}_|steps:{num_steps}_|run:{RUN_NAME}.pt"
@@ -61,7 +61,7 @@ print("Gym.make done")
 # Initializing the generator
 # Download the dataset before running this script
 data = minerl.data.make('MineRLTreechop-v0')
-iterator = BufferedBatchIter(data)
+iterator = BufferedBatchIter(data, buffer_target_size=3000)
 demo_replay_memory = iterator.buffered_batch_iter(batch_size=FRAME_STACK) # The batch_size here refers to the number of consequtive frames
 
 replay_memory = model.ReplayMemory(5000)
@@ -162,7 +162,7 @@ for i_episode in range(num_episodes):
         if (total_steps < pre_train_steps) or (len(replay_memory) < BATCH_SIZE):
             BETA = 0
         else:
-            BETA = (total_steps - pre_train_steps)/(num_steps - pre_train_steps)
+            BETA = 0.75*(total_steps - pre_train_steps)/(num_steps - pre_train_steps)
             # BETA = 0.5
 
         # Perform one step of the optimization (on the policy network)
